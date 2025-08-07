@@ -1,36 +1,33 @@
 package com.taskfoo.taskfoo_backend.controller;
 
 import com.taskfoo.taskfoo_backend.model.Project;
-import com.taskfoo.taskfoo_backend.repository.ProjectRepository;
+import com.taskfoo.taskfoo_backend.service.ProjectService;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/projects")
 public class ProjectController {
 
-    private final ProjectRepository projectRepository;
+    private final ProjectService projectService;
 
-    public ProjectController(ProjectRepository projectRepository) {
-        this.projectRepository = projectRepository;
+    public ProjectController(ProjectService projectService) {
+        this.projectService = projectService;
     }
 
     @GetMapping
     public List<Project> getAllProjects() {
-        return projectRepository.findAll();
+        return projectService.getAllProjects();
     }
 
     @PostMapping
     public Project createProject(@RequestBody Project project) {
-        project.setCreatedAt(LocalDate.now());
-        return projectRepository.save(project);
+        return projectService.createProject(project);
     }
 
     @DeleteMapping("/{id}")
     public void deleteProject(@PathVariable Long id) {
-        projectRepository.deleteById(id);
+        projectService.deleteProject(id);
     }
 }

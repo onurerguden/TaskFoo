@@ -1,40 +1,33 @@
 package com.taskfoo.taskfoo_backend.controller;
 
 import com.taskfoo.taskfoo_backend.model.Epic;
-import com.taskfoo.taskfoo_backend.repository.EpicRepository;
-import com.taskfoo.taskfoo_backend.repository.ProjectRepository;
+import com.taskfoo.taskfoo_backend.service.EpicService;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/epics")
 public class EpicController {
 
-    private final EpicRepository epicRepository;
-    private final ProjectRepository projectRepository;
+    private final EpicService epicService;
 
-    public EpicController(EpicRepository epicRepository, ProjectRepository projectRepository) {
-        this.epicRepository = epicRepository;
-        this.projectRepository = projectRepository;
+    public EpicController(EpicService epicService) {
+        this.epicService = epicService;
     }
 
     @GetMapping
     public List<Epic> getAllEpics() {
-        return epicRepository.findAll();
+        return epicService.getAllEpics();
     }
 
     @PostMapping
     public Epic createEpic(@RequestBody Epic epic) {
-        epic.setCreatedAt(LocalDate.now());
-        return epicRepository.save(epic);
+        return epicService.createEpic(epic);
     }
 
     @DeleteMapping("/{id}")
     public void deleteEpic(@PathVariable Long id) {
-        epicRepository.deleteById(id);
+        epicService.deleteEpic(id);
     }
-
-
 }
