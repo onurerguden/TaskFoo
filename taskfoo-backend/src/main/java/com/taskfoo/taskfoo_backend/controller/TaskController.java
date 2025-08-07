@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/tasks")
+@RequestMapping("api/tasks")
 public class TaskController {
 
     private final TaskService taskService;
@@ -70,5 +70,33 @@ public class TaskController {
 
         task.setAssignedUsers(users);
         return taskService.createTask(task); // re-save with assigned users
+    }
+
+    @PatchMapping("/{taskId}/add-user/{userId}")
+    public Task addUserToTask(@PathVariable Long taskId, @PathVariable Long userId) {
+        Task task = taskService.getTaskById(taskId);
+        User user = userRepository.findById(userId).orElse(null);
+
+        if (task == null || user == null) return null;
+
+        List<User> assignedUsers = task.getAssignedUsers();
+        if (!assignedUsers.contains(user)) {
+            assignedUsers.add(user);
+        }
+
+        task.setAssignedUsers(assignedUsers);
+        return taskService.createTask(task); // save updated task
+    }
+
+
+    @PatchMapping("/{taskId}/remove-user/{userId}")
+    public Task removeUserFromTask(@PathVariable Long taskId, @PathVariable Long userId) {
+        Task task = taskService.getTaskById(taskId);
+        User user = userRepository.findById(userId).orElse(null);
+
+        if (task == null || user == null) return null;
+
+        task.getAssignedUsers().remove(user);
+        return taskService.createTask(task);
     }
 }
