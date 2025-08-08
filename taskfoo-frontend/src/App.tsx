@@ -1,35 +1,32 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Layout, Menu, theme } from "antd";
+import { Routes, Route, Link } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
 
-function App() {
-  const [count, setCount] = useState(0)
+const { Header, Sider, Content } = Layout;
+
+export default function App() {
+  const { token } = theme.useToken();
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Layout style={{ minHeight: "100vh" }}>
+      <Sider>
+        <Menu
+          theme="dark"
+          items={[
+            { key: "dash", label: <Link to="/">Dashboard</Link> },
+            { key: "tasks", label: <Link to="/tasks">Tasks</Link> },
+          ]}
+        />
+      </Sider>
+      <Layout>
+        <Header style={{ color: "#fff" }}>TaskFoo</Header>
+        <Content style={{ padding: 24, background: token.colorBgContainer }}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/tasks" element={<Dashboard />} />
+          </Routes>
+        </Content>
+      </Layout>
+    </Layout>
+  );
 }
-
-export default App
