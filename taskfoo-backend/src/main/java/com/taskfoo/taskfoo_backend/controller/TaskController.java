@@ -99,4 +99,10 @@ public class TaskController {
         task.getAssignedUsers().remove(user);
         return taskService.createTask(task);
     }
+
+
+    @GetMapping("/search")
+    public List<Task> searchTasks(@RequestParam String q) {
+        return taskService.searchTasks(q);
+    }
 }

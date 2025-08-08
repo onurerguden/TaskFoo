@@ -19,6 +19,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body("Validation error: " + ex.getMessage());
     }
 
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<?> methodNotAllowed(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(405).body("Method not allowed. Allowed: " + String.join(", ", ex.getSupportedMethods()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGeneric(Exception ex) {
         return ResponseEntity.status(500).body("Internal server error: " + ex.getMessage());

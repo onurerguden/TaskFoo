@@ -21,6 +21,12 @@ public class ProjectController {
         return projectService.getAllProjects();
     }
 
+    @GetMapping("/{id}")
+    public Project getById(@PathVariable Long id) {
+        return projectService.getProjectById(id)  // service içinde notFound atıyor olmalı
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Project not found"));
+    }
+
     @PostMapping
     public Project createProject(@RequestBody Project project) {
         return projectService.createProject(project);

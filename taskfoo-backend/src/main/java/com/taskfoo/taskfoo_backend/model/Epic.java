@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "epics")
@@ -24,7 +26,10 @@ public class Epic {
 
     private LocalDate startDate;
     private LocalDate dueDate;
-    private LocalDate createdAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false, nullable = false)
+    private LocalDateTime createdAt;
 
     @ManyToOne
     @JoinColumn(name = "project_id")
