@@ -11,7 +11,6 @@ import {
   Typography,
   Space,
   App,
-  Divider,
   Tag,
   Avatar,
   Row,
@@ -27,7 +26,7 @@ import {
   CloseOutlined,
   PlusCircleOutlined,
 } from "@ant-design/icons";
-import dayjs, { Dayjs } from "dayjs";
+import { Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 
 import { listStatuses } from "../api/statuses";

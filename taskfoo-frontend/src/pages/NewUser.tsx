@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Form, Input, Button, Card, Typography, App, Row, Col, Space } from "antd";
 import { useNavigate } from "react-router-dom";
 import { createUser } from "../api/users";
-import { FileTextOutlined, SaveOutlined, CloseOutlined, PlusCircleOutlined, UserOutlined } from "@ant-design/icons";
+import { SaveOutlined, CloseOutlined, PlusCircleOutlined, UserOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 

@@ -4,7 +4,6 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   PlayCircleOutlined,
-  ExclamationCircleOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
   MinusOutlined,

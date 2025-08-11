@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Form, Input, DatePicker, Button, Card, Typography, App, Row, Col, Space } from "antd";
-import dayjs, { Dayjs } from "dayjs";
+import { Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { createProject } from "../api/projects";
 import { FileTextOutlined, CalendarOutlined, SaveOutlined, CloseOutlined, PlusCircleOutlined } from "@ant-design/icons";
