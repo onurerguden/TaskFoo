@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Table, Typography, Alert } from "antd";
-import { api } from "../api/client";
-import type { Task } from "../types/task";
+import api  from "../api/client";            // <- default export (gerekirse { api } yap)
+import type { Task } from "../types";
 
 const { Text } = Typography;
 
@@ -13,13 +13,23 @@ function fmt(d?: string) {
 }
 
 export default function Dashboard() {
-  const { data = [], isLoading, isError, error } = useQuery({
+  const { data = [], isLoading, isError, error } = useQuery<Task[]>({
     queryKey: ["tasks"],
-    queryFn: async () => (await api.get<Task[]>("/tasks")).data,
+    // PROXY kullanıyorsan:
+    queryFn: async () => (await api.get<Task[]>("/api/tasks")).data,
+    // PROXY kullanmıyorsan (env tabanlı):
+    // queryFn: async () => (await api.get<Task[]>("/tasks")).data,
   });
 
   if (isError) {
-    return <Alert type="error" message="Veri yüklenemedi" description={(error as Error).message} />;
+    return (
+      <Alert
+        type="error"
+        message="Veri yüklenemedi"
+        description={(error as Error)?.message}
+        showIcon
+      />
+    );
   }
 
   return (
@@ -28,7 +38,7 @@ export default function Dashboard() {
       rowKey="id"
       dataSource={data}
       pagination={{ pageSize: 10, showSizeChanger: false }}
-      scroll={{ x: "max-content" }}  // yatay kaydırma
+      scroll={{ x: "max-content" }}
       columns={[
         { title: "ID", dataIndex: "id", width: 80 },
         { title: "Title", dataIndex: "title", ellipsis: true },
@@ -61,7 +71,8 @@ export default function Dashboard() {
         },
         {
           title: "Project",
-          render: (_, r) => r.project?.name ?? r.epic?.project?.name ?? "-",
+          // JSON'unda project üst seviyede yoksa epic.project'tan gösteriyoruz
+          render: (_, r) => (r as any).project?.name ?? r.epic?.project?.name ?? "-",
           width: 180,
         },
         {

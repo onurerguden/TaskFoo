@@ -1,6 +1,8 @@
 import axios from "axios";
 
-export const api = axios.create({
-  baseURL: "/api",
-  headers: { "Content-Type": "application/json" },
+const api = axios.create({
+  baseURL: "/",        // proxy kullanıyorsan "/"
+  timeout: 10000,
 });
+
+export default api;     // <-- DEFAULT EXPORT
