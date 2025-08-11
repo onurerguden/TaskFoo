@@ -10,19 +10,32 @@ import {
   ProjectOutlined,
   FlagOutlined,
   TeamOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
 
 const { Sider } = Layout;
 
-// Define menu items (path = key)
 const items: MenuProps["items"] = [
   { key: "/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
+  { key: "/board", label: "Board", icon: <AppstoreOutlined /> },
+
+
+  // Tasks
   { key: "/tasks", label: "Tasks", icon: <ProfileOutlined /> },
   { key: "/tasks/new", label: "New Task", icon: <PlusOutlined /> },
-  { key: "/board", label: "Board", icon: <AppstoreOutlined /> },
+  
   { type: "divider" },
+
+  // Projects
+  { key: "/projects", label: "Projects", icon: <UnorderedListOutlined /> },
   { key: "/projects/new", label: "New Project", icon: <ProjectOutlined /> },
+
+  // Epics
+  { key: "/epics", label: "Epics", icon: <UnorderedListOutlined /> },
   { key: "/epics/new", label: "New Epic", icon: <FlagOutlined /> },
+
+  // Users
+  { key: "/users", label: "Users", icon: <UnorderedListOutlined /> },
   { key: "/users/new", label: "New User", icon: <TeamOutlined /> },
 ];
 
@@ -35,7 +48,6 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  // collect only string keys from items (skip dividers, groups, etc.)
   const keys: string[] = (items ?? [])
     .map((it) => {
       const k = (it as any)?.key;
@@ -43,25 +55,15 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
     })
     .filter((k): k is string => !!k);
 
-  // 1) exact match wins
   const exact = keys.find((k) => k === pathname);
-
-  // 2) otherwise, choose the longest prefix match (/tasks/new -> /tasks/new > /tasks)
-  const longestPrefix =
-    keys
-      .filter((k) => pathname.startsWith(k))
-      .sort((a, b) => b.length - a.length)[0];
+  const longestPrefix = keys
+    .filter((k) => pathname.startsWith(k))
+    .sort((a, b) => b.length - a.length)[0];
 
   const selectedKey = exact ?? longestPrefix ?? pathname;
 
   return (
-    <Sider
-      collapsible
-      collapsed={collapsed}
-      onCollapse={onCollapse}
-      breakpoint="lg"
-    >
-      {/* logo / brand area */}
+    <Sider collapsible collapsed={collapsed} onCollapse={onCollapse} breakpoint="lg">
       <div
         style={{
           height: 48,
@@ -70,7 +72,6 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
           background: "rgba(255,255,255,0.15)",
         }}
       />
-
       <Menu
         theme="dark"
         mode="inline"
