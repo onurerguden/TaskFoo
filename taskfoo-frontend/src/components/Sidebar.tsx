@@ -13,17 +13,18 @@ import {
   UnorderedListOutlined,
 } from "@ant-design/icons";
 
+import logo from "../assets/taskfoo-logo.png"; // Logo yolu
+
 const { Sider } = Layout;
 
 const items: MenuProps["items"] = [
   { key: "/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
   { key: "/board", label: "Board", icon: <AppstoreOutlined /> },
 
-
   // Tasks
   { key: "/tasks", label: "Tasks", icon: <ProfileOutlined /> },
   { key: "/tasks/new", label: "New Task", icon: <PlusOutlined /> },
-  
+
   { type: "divider" },
 
   // Projects
@@ -64,14 +65,39 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
 
   return (
     <Sider collapsible collapsed={collapsed} onCollapse={onCollapse} breakpoint="lg">
+      {/* Logo Alanı */}
       <div
+        onClick={() => navigate("/dashboard")}
         style={{
-          height: 48,
+          height: 56,
           margin: 12,
-          borderRadius: 6,
-          background: "rgba(255,255,255,0.15)",
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          cursor: "pointer",
+          padding: "8px 10px",
+          background: "rgba(255,255,255,0.06)",
         }}
-      />
+      >
+        <img
+          src={logo}
+          alt="TaskFoo"
+          style={{
+            width: 28,
+            height: 28,
+            objectFit: "contain",
+            filter: "drop-shadow(0 1px 1px rgba(0,0,0,.15))",
+          }}
+        />
+        {!collapsed && (
+          <span style={{ color: "#fff", fontWeight: 600, letterSpacing: 0.3 }}>
+            TaskFoo
+          </span>
+        )}
+      </div>
+
+      {/* Menü */}
       <Menu
         theme="dark"
         mode="inline"
