@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Sidebar from "./components/Sidebar";
+import Board from "./pages/Board";
 
 
 import { useState } from "react";
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/board" element={<Board />} />
           </Routes>
         </Content>
       </Layout>

@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Table, Typography, Alert } from "antd";
-import api  from "../api/client";            // <- default export (gerekirse { api } yap)
+import { Card, Col, Row, Table, Typography, Alert, Statistic } from "antd";
+import api from "../api/client";
 import type { Task } from "../types";
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 function fmt(d?: string) {
   if (!d) return "-";
@@ -15,10 +15,7 @@ function fmt(d?: string) {
 export default function Dashboard() {
   const { data = [], isLoading, isError, error } = useQuery<Task[]>({
     queryKey: ["tasks"],
-    // PROXY kullanıyorsan:
     queryFn: async () => (await api.get<Task[]>("/api/tasks")).data,
-    // PROXY kullanmıyorsan (env tabanlı):
-    // queryFn: async () => (await api.get<Task[]>("/tasks")).data,
   });
 
   if (isError) {
@@ -32,67 +29,60 @@ export default function Dashboard() {
     );
   }
 
+  // basit metrikler
+  const total = data.length;
+  const byStatus = (name: string) =>
+    data.filter(t => t.status?.name === name).length;
+  const byPriority = (name: string) =>
+    data.filter(t => t.priority?.name === name).length;
+
+  // son 5 (createdAt’e göre)
+  const latest = [...data]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+
   return (
-    <Table<Task>
-      loading={isLoading}
-      rowKey="id"
-      dataSource={data}
-      pagination={{ pageSize: 10, showSizeChanger: false }}
-      scroll={{ x: "max-content" }}
-      columns={[
-        { title: "ID", dataIndex: "id", width: 80 },
-        { title: "Title", dataIndex: "title", ellipsis: true },
-        {
-          title: "Status",
-          render: (_, r) => r.status?.name ?? "-",
-          width: 140,
-        },
-        {
-          title: "Priority",
-          render: (_, r) => (
-            <span>
-              <Text>{r.priority?.name ?? "-"}</Text>
-              {r.priority?.color ? (
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: 10,
-                    height: 10,
-                    borderRadius: 999,
-                    marginLeft: 8,
-                    background: r.priority.color,
-                    verticalAlign: "middle",
-                  }}
-                />
-              ) : null}
-            </span>
-          ),
-          width: 160,
-        },
-        {
-          title: "Project",
-          // JSON'unda project üst seviyede yoksa epic.project'tan gösteriyoruz
-          render: (_, r) => (r as any).project?.name ?? r.epic?.project?.name ?? "-",
-          width: 180,
-        },
-        {
-          title: "Epic",
-          render: (_, r) => r.epic?.name ?? "-",
-          width: 180,
-        },
-        {
-          title: "Assignees",
-          render: (_, r) =>
-            r.assignedUsers?.length
-              ? r.assignedUsers.map((u) => u.name).join(", ")
-              : "-",
-          ellipsis: true,
-          width: 220,
-        },
-        { title: "Start", render: (_, r) => fmt(r.startDate), width: 180 },
-        { title: "Due", render: (_, r) => fmt(r.dueDate), width: 180 },
-        { title: "Created", render: (_, r) => fmt(r.createdAt), width: 220 },
-      ]}
-    />
+    <div>
+      <Title level={3} style={{ marginBottom: 16 }}>Overview</Title>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={isLoading}><Statistic title="Total Tasks" value={total} /></Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={isLoading}><Statistic title="To Do" value={byStatus("To Do")} /></Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={isLoading}><Statistic title="In Progress" value={byStatus("In Progress")} /></Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={isLoading}><Statistic title="Done" value={byStatus("Done")} /></Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={isLoading}><Statistic title="High" value={byPriority("High")} /></Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={isLoading}><Statistic title="Medium" value={byPriority("Medium")} /></Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card loading={isLoading}><Statistic title="Low" value={byPriority("Low")} /></Card>
+        </Col>
+      </Row>
+
+      <Title level={4} style={{ marginTop: 24 }}>Latest 5 Tasks</Title>
+      <Table<Task>
+        loading={isLoading}
+        rowKey="id"
+        dataSource={latest}
+        pagination={false}
+        size="small"
+        columns={[
+          { title: "ID", dataIndex: "id", width: 70 },
+          { title: "Title", dataIndex: "title", ellipsis: true },
+          { title: "Status", render: (_, r) => r.status?.name ?? "-" , width: 130 },
+          { title: "Priority", render: (_, r) => r.priority?.name ?? "-" , width: 120 },
+          { title: "Created", render: (_, r) => fmt(r.createdAt), width: 200 },
+        ]}
+      />
+    </div>
   );
 }

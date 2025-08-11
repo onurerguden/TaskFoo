@@ -5,6 +5,7 @@ import com.taskfoo.taskfoo_backend.model.User;
 import com.taskfoo.taskfoo_backend.repository.UserRepository;
 import com.taskfoo.taskfoo_backend.service.TaskService;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -104,5 +105,13 @@ public class TaskController {
     @GetMapping("/search")
     public List<Task> searchTasks(@RequestParam String q) {
         return taskService.searchTasks(q);
+    }
+
+    @PatchMapping("/api/tasks/{taskId}/status")
+    public ResponseEntity<Task> changeStatus(
+            @PathVariable Long taskId,
+            @RequestParam Long statusId) {
+        Task updated = taskService.changeStatus(taskId, statusId);
+        return ResponseEntity.ok(updated);
     }
 }
