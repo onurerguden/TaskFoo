@@ -2,18 +2,28 @@
 import { Layout, Menu } from "antd";
 import type { MenuProps } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
-import { DashboardOutlined, ProfileOutlined } from "@ant-design/icons";
-import { AppstoreOutlined } from "@ant-design/icons";
-import { PlusOutlined } from "@ant-design/icons";
+import {
+  DashboardOutlined,
+  ProfileOutlined,
+  AppstoreOutlined,
+  PlusOutlined,
+  ProjectOutlined,
+  FlagOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 
 const { Sider } = Layout;
 
-// Menü öğelerini tek yerde topluyoruz (path = key)
+// Define menu items (path = key)
 const items: MenuProps["items"] = [
   { key: "/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
-  { key: "/tasks",     label: "Tasks",     icon: <ProfileOutlined /> },
-   { key: "/tasks/new", label: "New Task",  icon: <PlusOutlined /> }, // yeni eklendi
-   { key: "/board",     label: "Board",     icon: <AppstoreOutlined /> }, // yeni
+  { key: "/tasks", label: "Tasks", icon: <ProfileOutlined /> },
+  { key: "/tasks/new", label: "New Task", icon: <PlusOutlined /> },
+  { key: "/board", label: "Board", icon: <AppstoreOutlined /> },
+  { type: "divider" },
+  { key: "/projects/new", label: "New Project", icon: <ProjectOutlined /> },
+  { key: "/epics/new", label: "New Epic", icon: <FlagOutlined /> },
+  { key: "/users/new", label: "New User", icon: <TeamOutlined /> },
 ];
 
 type Props = {
@@ -25,24 +35,41 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  // Alt rota durumunda da doğru sekme seçilsin (örn. /tasks/123)
-  const selectedKey =
-    (items ?? [])
-      .map(i => String(i?.key))
-      .find(k => pathname === k || pathname.startsWith(k + "/")) ?? pathname;
+  // collect only string keys from items (skip dividers, groups, etc.)
+  const keys: string[] = (items ?? [])
+    .map((it) => {
+      const k = (it as any)?.key;
+      return typeof k === "string" ? k : null;
+    })
+    .filter((k): k is string => !!k);
+
+  // 1) exact match wins
+  const exact = keys.find((k) => k === pathname);
+
+  // 2) otherwise, choose the longest prefix match (/tasks/new -> /tasks/new > /tasks)
+  const longestPrefix =
+    keys
+      .filter((k) => pathname.startsWith(k))
+      .sort((a, b) => b.length - a.length)[0];
+
+  const selectedKey = exact ?? longestPrefix ?? pathname;
 
   return (
     <Sider
       collapsible
       collapsed={collapsed}
       onCollapse={onCollapse}
-      breakpoint="lg"       // ekran küçülünce otomatik daralt
+      breakpoint="lg"
     >
-      {/* logo/başlık alanı (istersen logonu koy) */}
-      <div style={{
-        height: 48, margin: 12, borderRadius: 6,
-        background: "rgba(255,255,255,0.15)"
-      }} />
+      {/* logo / brand area */}
+      <div
+        style={{
+          height: 48,
+          margin: 12,
+          borderRadius: 6,
+          background: "rgba(255,255,255,0.15)",
+        }}
+      />
 
       <Menu
         theme="dark"

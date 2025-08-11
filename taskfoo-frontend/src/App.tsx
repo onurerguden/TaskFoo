@@ -6,6 +6,12 @@ import Tasks from "./pages/Tasks";
 import Sidebar from "./components/Sidebar";
 import Board from "./pages/Board";
 import NewTask from "./pages/NewTask";
+import NewProject from "./pages/NewProject";
+import NewEpic from "./pages/NewEpics";
+import NewUser from "./pages/NewUser";
+import Users from "./pages/Users";
+import Epics from "./pages/Epics";
+import Projects from "./pages/Projects";
 
 
 import { useState } from "react";
@@ -29,6 +35,12 @@ export default function App() {
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/board" element={<Board />} />
             <Route path="/tasks/new" element={<NewTask />} />
+            <Route path="/projects/new" element={<NewProject />} />
+            <Route path="/epics/new" element={<NewEpic />} />
+            <Route path="/users/new" element={<NewUser />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/epics" element={<Epics />} />
+            <Route path="/projects" element={<Projects />} />
           </Routes>
         </Content>
       </Layout>
