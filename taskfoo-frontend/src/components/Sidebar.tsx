@@ -4,6 +4,7 @@ import type { MenuProps } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardOutlined, ProfileOutlined } from "@ant-design/icons";
 import { AppstoreOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "@ant-design/icons";
 
 const { Sider } = Layout;
 
@@ -11,6 +12,7 @@ const { Sider } = Layout;
 const items: MenuProps["items"] = [
   { key: "/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
   { key: "/tasks",     label: "Tasks",     icon: <ProfileOutlined /> },
+   { key: "/tasks/new", label: "New Task",  icon: <PlusOutlined /> }, // yeni eklendi
    { key: "/board",     label: "Board",     icon: <AppstoreOutlined /> }, // yeni
 ];
 

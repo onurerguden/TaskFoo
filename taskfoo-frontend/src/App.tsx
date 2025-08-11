@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Sidebar from "./components/Sidebar";
 import Board from "./pages/Board";
+import NewTask from "./pages/NewTask";
 
 
 import { useState } from "react";
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/board" element={<Board />} />
+            <Route path="/tasks/new" element={<NewTask />} />
           </Routes>
         </Content>
       </Layout>
