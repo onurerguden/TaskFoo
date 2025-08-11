@@ -69,32 +69,28 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
       <div
         onClick={() => navigate("/dashboard")}
         style={{
-          height: 56,
+          height: 120,
           margin: 12,
           borderRadius: 8,
           display: "flex",
           alignItems: "center",
-          gap: 10,
+          justifyContent: "center",
           cursor: "pointer",
-          padding: "8px 10px",
-          background: "rgba(255,255,255,0.06)",
+          background: "transparent",
+          padding: "10px 0",
         }}
       >
         <img
           src={logo}
           alt="TaskFoo"
           style={{
-            width: 28,
-            height: 28,
+            width: collapsed ? 56 : "80%",
+            height: "auto",
             objectFit: "contain",
+            transition: "all 0.2s ease-in-out",
             filter: "drop-shadow(0 1px 1px rgba(0,0,0,.15))",
           }}
         />
-        {!collapsed && (
-          <span style={{ color: "#fff", fontWeight: 600, letterSpacing: 0.3 }}>
-            TaskFoo
-          </span>
-        )}
       </div>
 
       {/* Menü */}

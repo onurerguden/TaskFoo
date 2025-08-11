@@ -27,8 +27,8 @@ export default function App() {
       <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
 
       <Layout>
-        <Header style={{ color: "#fff" }}>TaskFoo</Header>
-        <Content style={{ padding: 24, background: token.colorBgContainer }}>
+        <Header style={{ color: "#fff" }}>TaskFoo Project Management Web Application</Header>
+        <Content style={{ padding: 0, background: token.colorBgContainer }}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
