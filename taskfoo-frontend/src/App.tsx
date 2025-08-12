@@ -14,7 +14,6 @@ import Epics from "./pages/Epics";
 import Projects from "./pages/Projects";
 import headerLogo from "./assets/header-logo.png"; 
 
-
 import { useState } from "react";
 
 const { Header, Content } = Layout;
@@ -28,30 +27,37 @@ export default function App() {
       <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
 
       <Layout>
-<Header
-  style={{
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 40,
-  }}
->
-  <div
-    style={{
-      margin: `${collapsed ? 16 : 35}px 1px 1px`, // buraya ekledik
-    }}
-  >
-    <img
-      src={headerLogo}
-      alt="Taskfoo Project Management Web Application"
-      style={{
-        height: "300px",
-        objectFit: "contain",
-      }}
-    />
-  </div>
-</Header>
+        <Header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: 40,
+          }}
+        >
+          <div
+            style={{
+              margin: `${collapsed ? 16 : 35}px 1px 1px`,
+            }}
+          >
+            <img
+              src={headerLogo}
+              alt="Taskfoo Project Management Web Application"
+              style={{
+                height: "300px",
+                objectFit: "contain",
+              }}
+            />
+          </div>
+        </Header>
         <Content style={{ padding: 0, background: token.colorBgContainer }}>
+          {/* Seçili menü öğesinin rengini açık mavi yapıyoruz */}
+          <style>{`
+            .ant-menu-dark .ant-menu-item-selected {
+              background-color: #3092B9 !important;
+            }
+          `}</style>
+
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />

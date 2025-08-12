@@ -11,7 +11,7 @@ export default function PageHeaderIcon({ title, icon, style }: Props) {
   return (
     <div
       style={{
-        background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
+        background: "#3092B9", 
         padding: "8px 16px",
         marginBottom: 12,
         ...style,
