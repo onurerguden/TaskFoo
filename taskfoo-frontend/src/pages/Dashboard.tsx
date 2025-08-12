@@ -12,8 +12,9 @@ import {
 } from "@ant-design/icons";
 import api from "../api/client";
 import type { Task } from "../types";
+import PageHeaderJust from "../components/PageHeaderJust";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 function fmt(d?: string) {
   if (!d) return "-";
@@ -166,28 +167,7 @@ export default function Dashboard() {
       background: "#f8f9fa",
       padding: "0"
     }}>
-      {/* Header Section */}
-      <div style={{ 
-        background: "linear-gradient(135deg, #1e40afff 0%, #3b82f6 100%)",
-        padding: "1px 1px",
-        marginBottom: "0"
-      }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <Title 
-            level={1} 
-            style={{ 
-              textAlign: "left",
-              color: "white",
-              margin: 0,
-              fontSize: "20px",
-              fontWeight: 600
-            }}
-          >
-            Dashboard Overview
-          </Title>
-        </div>
-      </div>
-
+      <PageHeaderJust title="Dashboard" />
       {/* Main Content */}
       <div style={{ 
         maxWidth: "1200px", 

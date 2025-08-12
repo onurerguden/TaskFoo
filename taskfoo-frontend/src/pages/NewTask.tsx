@@ -1,6 +1,7 @@
 // src/pages/NewTask.tsx
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import PageHeaderIcon from "../components/PageHeaderIcon";
 import {
   Form,
   Input,
@@ -24,7 +25,6 @@ import {
   FileTextOutlined,
   SaveOutlined,
   CloseOutlined,
-  PlusCircleOutlined,
 } from "@ant-design/icons";
 import { Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
@@ -36,7 +36,7 @@ import { listProjects } from "../api/projects";
 import { listUsers } from "../api/users";
 import { createTask, assignUsers } from "../api/tasks";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 type FormValues = {
@@ -105,28 +105,7 @@ export default function NewTask() {
       padding: "0"
     }}>
       {/* Header Section */}
-      <div style={{ 
-        background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
-        padding: "1px 1px",
-        marginBottom: "0"
-      }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <Title 
-            level={1} 
-            style={{ 
-              textAlign: "left",
-              color: "white",
-              margin: 0,
-              fontSize: "20px",
-              fontWeight: 600
-            }}
-          >
-            <PlusCircleOutlined style={{ marginRight: "12px" }} />
-            Create New Task
-          </Title>
-        </div>
-      </div>
-
+     <PageHeaderIcon title="Create New Task" />
       {/* Main Content */}
       <div style={{ 
         maxWidth: "1200px", 

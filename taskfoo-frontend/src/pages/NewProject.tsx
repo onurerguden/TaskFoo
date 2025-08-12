@@ -3,9 +3,10 @@ import { Form, Input, DatePicker, Button, Card, Typography, App, Row, Col, Space
 import { Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { createProject } from "../api/projects";
-import { FileTextOutlined, CalendarOutlined, SaveOutlined, CloseOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { FileTextOutlined, CalendarOutlined, SaveOutlined, CloseOutlined } from "@ant-design/icons";
+import PageHeaderIcon from "../components/PageHeaderIcon";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 type FormValues = {
@@ -43,14 +44,7 @@ export default function NewProject() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)", padding: "1px 1px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <Title level={1} style={{ textAlign: "left", color: "white", margin: 0, fontSize: 20, fontWeight: 600 }}>
-            <PlusCircleOutlined style={{ marginRight: 12 }} />
-            Create New Project
-          </Title>
-        </div>
-      </div>
+     <PageHeaderIcon title="Create New Project" />
 
       {/* Content */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>

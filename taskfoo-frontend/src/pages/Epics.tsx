@@ -2,13 +2,13 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, Typography, Alert, Space, Button, Popconfirm, App, Tag } from "antd";
-import { DeleteOutlined, EyeOutlined, PlusOutlined, FlagOutlined, ProjectOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EyeOutlined, FlagOutlined, ProjectOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import type { Task } from "../types";
 import PageHeader from "../components/PageHeader";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 type EpicRow = {
   id: number;

@@ -2,9 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Form, Input, Button, Card, Typography, App, Row, Col, Space } from "antd";
 import { useNavigate } from "react-router-dom";
 import { createUser } from "../api/users";
-import { SaveOutlined, CloseOutlined, PlusCircleOutlined, UserOutlined } from "@ant-design/icons";
+import { SaveOutlined, CloseOutlined, UserOutlined } from "@ant-design/icons";
+import PageHeaderIcon from "../components/PageHeaderIcon";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 type FormValues = {
   name: string;
@@ -33,15 +34,7 @@ export default function NewUser() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)", padding: "1px 1px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <Title level={1} style={{ textAlign: "left", color: "white", margin: 0, fontSize: 20, fontWeight: 600 }}>
-            <PlusCircleOutlined style={{ marginRight: 12 }} />
-            Create New User
-          </Title>
-        </div>
-      </div>
-
+      <PageHeaderIcon title="Create New User" />
       {/* Content */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
         <Form form={form} layout="vertical" onFinish={(v) => mut.mutate(v)} disabled={loading}>

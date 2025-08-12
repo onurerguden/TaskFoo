@@ -2,13 +2,12 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, Typography, Alert, Tag, Avatar, Space, Button, Popconfirm, App } from "antd";
-import { PlusOutlined, DeleteOutlined, UserOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { DeleteOutlined, UserOutlined } from "@ant-design/icons";
 import api from "../api/client";
 import type { Task } from "../types";
 import PageHeader from "../components/PageHeader";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 // Helpers for compact date/time
 function fmtDate(d?: string) {
@@ -36,7 +35,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Tasks() {
-  const nav = useNavigate();
   const qc = useQueryClient();
   const { message } = App.useApp();
 

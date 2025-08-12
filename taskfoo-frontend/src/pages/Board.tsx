@@ -44,12 +44,12 @@ import {
   CalendarOutlined, 
   PaperClipOutlined,
   ClockCircleOutlined,
-  ContainerOutlined,
+  
   ExclamationCircleOutlined,
   WifiOutlined,
   ReloadOutlined,
   PlusOutlined,
-  PlusCircleOutlined
+  
 } from "@ant-design/icons";
 
 import { listStatuses } from "../api/statuses";
@@ -57,6 +57,7 @@ import { listTasks, updateTaskStatus } from "../api/tasks";
 import { listUsers } from "../api/users";
 import { listPriorities } from "../api/priorities";
 import type { Task, Status, Priority, User } from "../types";
+import PageHeaderJust from "../components/PageHeaderJust";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -991,14 +992,7 @@ export default function EnhancedBoard() {
       {msgCtx}
       <NetworkStatus isOnline={isOnline} />
       
-<div style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)", padding: "1px 1px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <Title level={1} style={{ textAlign: "left", color: "white", margin: 0, fontSize: 20, fontWeight: 600 }}>
-          
-            Task Board
-          </Title>
-        </div>
-      </div>
+   <PageHeaderJust title="Task Board" />
 
       <div style={{ padding: 24, minHeight: '100vh', display: 'block' }}>
        {/* Header Banner */}
