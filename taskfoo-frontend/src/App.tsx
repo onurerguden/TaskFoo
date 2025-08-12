@@ -45,7 +45,7 @@ export default function App() {
       src={headerLogo}
       alt="Taskfoo Project Management Web Application"
       style={{
-        height: "380px",
+        height: "440px",
         objectFit: "contain",
       }}
     />

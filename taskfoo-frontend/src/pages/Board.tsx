@@ -927,7 +927,7 @@ export default function EnhancedBoard() {
       updateTaskStatus(taskId, statusId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
-      msg.success("Task status updated successfully");
+      msg.success("Task status updated successfully" , 0.7);
     },
     onError: (error) => {
       console.error("Failed to update task status:", error);
