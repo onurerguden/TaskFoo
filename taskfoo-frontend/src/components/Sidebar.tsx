@@ -63,21 +63,34 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
 
   const selectedKey = exact ?? longestPrefix ?? pathname;
 
+// src/components/Sidebar.tsx
+
+// ...
   return (
-    <Sider collapsible collapsed={collapsed} onCollapse={onCollapse} breakpoint="lg">
+    <Sider
+      collapsible
+      collapsed={collapsed}
+      onCollapse={onCollapse}
+      breakpoint="lg"
+      // İstersen Sider'a da minik üst padding verebilirsin
+      // style={{ paddingTop: collapsed ? 8 : 12 }}
+    >
       {/* Logo Alanı */}
       <div
         onClick={() => navigate("/dashboard")}
         style={{
+          // eski: margin: 12,
+          // Üste extra boşluk:
+          margin: `${collapsed ? 16 : 28}px 12px 12px`,
           height: 120,
-          margin: 12,
           borderRadius: 8,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
           background: "transparent",
-          padding: "10px 0",
+          // sticker gibi dursun ve üst boşluk artsın diye üst padding de ekledim
+          padding: `${collapsed ? 6 : 12}px 0 10px`,
         }}
       >
         <img
