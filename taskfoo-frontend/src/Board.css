@@ -1,0 +1,9 @@
+@keyframes doneHighlight {
+  0%   { background-color: #bbf7d0; } /* light green */
+  50%  { background-color: #86efac; } /* brighter green */
+  100% { background-color: white; }
+}
+
+.task-card.just-done {
+  animation: doneHighlight 1s ease-in-out;
+}

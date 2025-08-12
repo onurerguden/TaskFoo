@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import "/src/Board.css";
 import {
   DndContext,
   type DragEndEvent,
@@ -184,11 +185,15 @@ const PRIORITY_ICONS = {
 function DraggableTask({ 
   task, 
   onSelect, 
-  onEdit
+  onEdit,
+  suppressWarnings,
+  justDone
 }: { 
   task: TaskWithMetadata;
   onSelect: (id: number, multi: boolean) => void;
   onEdit: (task: TaskWithMetadata) => void;
+  suppressWarnings: boolean;
+  justDone?: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -236,6 +241,7 @@ function DraggableTask({
 
   return (
     <Card
+      className={`task-card ${justDone ? 'just-done' : ''}`}
       ref={setNodeRef}
       size="small"
       style={style}
@@ -345,7 +351,7 @@ function DraggableTask({
       {/* Bottom row: Due date and assignees */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {/* Due date */}
-        {task.dueDate && (
+        {task.dueDate && !suppressWarnings && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <CalendarOutlined style={{ fontSize: 11, color: dueInfo.color }} />
             <Text 
@@ -465,6 +471,8 @@ function Column({
   isLoading,
   onTaskSelect,
   onTaskEdit,
+  suppressWarnings,
+  recentlyDoneIds,
 }: { 
   status: Status; 
   tasks: TaskWithMetadata[];
@@ -472,6 +480,8 @@ function Column({
   isLoading: boolean;
   onTaskSelect: (id: number, multi: boolean) => void;
   onTaskEdit: (task: TaskWithMetadata) => void;
+  suppressWarnings: boolean;
+  recentlyDoneIds: Set<number>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(status.id) });
   const theme = STATUS_THEME[status.name] || DEFAULT_STATUS;
@@ -494,22 +504,24 @@ function Column({
                 }}
               />
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {metrics.overdue > 0 && (
-                <Tooltip title="Overdue tasks">
-                  <Badge 
-                    count={metrics.overdue} 
-                    style={{ backgroundColor: '#dc2626' }}
-                    size="small"
-                  />
-                </Tooltip>
-              )}
-              {metrics.highPriority > 0 && (
-                <Tooltip title="High priority tasks">
-                  <ExclamationCircleOutlined style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }} />
-                </Tooltip>
-              )}
-            </div>
+            {!suppressWarnings && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {metrics.overdue > 0 && (
+                  <Tooltip title="Overdue tasks">
+                    <Badge 
+                      count={metrics.overdue} 
+                      style={{ backgroundColor: '#dc2626' }}
+                      size="small"
+                    />
+                  </Tooltip>
+                )}
+                {metrics.highPriority > 0 && (
+                  <Tooltip title="High priority tasks">
+                    <ExclamationCircleOutlined style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }} />
+                  </Tooltip>
+                )}
+              </div>
+            )}
           </div>
         }
         headStyle={{
@@ -557,6 +569,8 @@ function Column({
               task={task}
               onSelect={onTaskSelect}
               onEdit={onTaskEdit}
+              suppressWarnings={suppressWarnings}
+              justDone={recentlyDoneIds.has(task.id)}
             />
           ))
         )}
@@ -721,6 +735,7 @@ export default function EnhancedBoard() {
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [editingTask, setEditingTask] = useState<TaskWithMetadata | null>(null);
+  const [recentlyDoneIds, setRecentlyDoneIds] = useState<Set<number>>(new Set());
 
   // Filters state
   const [filters, setFilters] = useState<FilterState>({
@@ -1031,6 +1046,22 @@ export default function EnhancedBoard() {
                 );
               });
 
+              // Trigger Done highlight animation
+              if (newStatusObj?.name === 'Done' && taskId) {
+                setRecentlyDoneIds(prev => {
+                  const next = new Set(prev);
+                  next.add(taskId);
+                  return next;
+                });
+                setTimeout(() => {
+                  setRecentlyDoneIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(taskId);
+                    return next;
+                  });
+                }, 1100);
+              }
+
               updateStatusMutation.mutate({ taskId, statusId: newStatusId });
             }}
             modifiers={[restrictToWindowEdges]}
@@ -1045,6 +1076,8 @@ export default function EnhancedBoard() {
                     isLoading={isLoading}
                     onTaskSelect={handleTaskSelect}
                     onTaskEdit={handleTaskEdit}
+                    suppressWarnings={status.name === 'Done' || status.name === 'Archive'}
+                    recentlyDoneIds={recentlyDoneIds}
                   />
                 </Col>
               ))}
