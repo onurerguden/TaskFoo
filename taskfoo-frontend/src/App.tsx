@@ -12,6 +12,7 @@ import NewUser from "./pages/NewUser";
 import Users from "./pages/Users";
 import Epics from "./pages/Epics";
 import Projects from "./pages/Projects";
+import headerLogo from "./assets/header-logo.png"; 
 
 
 import { useState } from "react";
@@ -27,7 +28,29 @@ export default function App() {
       <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
 
       <Layout>
-        <Header style={{ color: "#fff" }}>TaskFoo Project Management Web Application</Header>
+<Header
+  style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 100,
+  }}
+>
+  <div
+    style={{
+      margin: `${collapsed ? 16 : 28}px 12px 12px`, // buraya ekledik
+    }}
+  >
+    <img
+      src={headerLogo}
+      alt="Taskfoo Project Management Web Application"
+      style={{
+        height: "380px",
+        objectFit: "contain",
+      }}
+    />
+  </div>
+</Header>
         <Content style={{ padding: 0, background: token.colorBgContainer }}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
