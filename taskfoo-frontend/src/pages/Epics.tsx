@@ -6,6 +6,7 @@ import { DeleteOutlined, EyeOutlined, PlusOutlined, FlagOutlined, ProjectOutline
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import type { Task } from "../types";
+import PageHeader from "../components/PageHeader";
 
 const { Title, Text } = Typography;
 
@@ -114,15 +115,13 @@ export default function Epics() {
   );
 
   return (
+
+
+
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
-      <div style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)", padding: "16px 20px", marginBottom: 12 }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <Title level={3} style={{ color: "white", margin: 0 }}>🏁 Epics</Title>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => nav("/epics/new")} style={{ background: "white", color: "#1e40af", border: "none" }}>
-            New Epic
-          </Button>
-        </div>
-      </div>
+ 
+<PageHeader title="Epics" actionText="New Epic" to="/epics/new" />
+
 
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: 12 }}>
         <Table<EpicRow>

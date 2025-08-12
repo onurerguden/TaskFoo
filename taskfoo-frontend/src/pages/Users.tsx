@@ -6,6 +6,9 @@ import { UserOutlined, DeleteOutlined, EyeOutlined, PlusOutlined } from "@ant-de
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import type { Task } from "../types";
+import PageHeader from "../components/PageHeader";
+// ...
+
 
 const { Title, Text } = Typography;
 
@@ -101,38 +104,22 @@ export default function Users() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
-      {/* Header */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
-          padding: "16px 20px",
-          marginBottom: 12,
-        }}
-      >
-        <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <Title level={3} style={{ color: "white", margin: 0 }}>👤 Users</Title>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => nav("/users/new")}
-            style={{ background: "white", color: "#1e40af", border: "none" }}
-          >
-            New User
-          </Button>
-        </div>
-      </div>
+    
+  <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    {/* Header */}
+    
+<PageHeader title="Users" actionText="New User" to="/users/new" />
 
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 12 }}>
-        <Table<UserRow>
-          size="middle"
-          loading={isLoading}
-          rowKey="id"
-          dataSource={users}
-          pagination={{ pageSize: 10, showSizeChanger: false }}
-          columns={columns as any}
-        />
-      </div>
+    <div style={{ maxWidth: 1400, margin: "0 auto", padding: 12 }}>
+      <Table<UserRow>
+        size="middle"
+        loading={isLoading}
+        rowKey="id"
+        dataSource={users}
+        pagination={{ pageSize: 10, showSizeChanger: false }}
+        columns={columns as any}
+      />
     </div>
-  );
+  </div>
+);
 }

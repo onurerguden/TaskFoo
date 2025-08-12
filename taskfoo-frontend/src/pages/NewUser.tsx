@@ -33,9 +33,9 @@ export default function NewUser() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)", padding: "32px 24px" }}>
+      <div style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)", padding: "1px 1px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <Title level={1} style={{ textAlign: "center", color: "white", margin: 0, fontSize: 28, fontWeight: 600 }}>
+          <Title level={1} style={{ textAlign: "left", color: "white", margin: 0, fontSize: 20, fontWeight: 600 }}>
             <PlusCircleOutlined style={{ marginRight: 12 }} />
             Create New User
           </Title>

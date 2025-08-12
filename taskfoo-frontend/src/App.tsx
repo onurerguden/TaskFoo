@@ -33,19 +33,19 @@ export default function App() {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    height: 100,
+    height: 40,
   }}
 >
   <div
     style={{
-      margin: `${collapsed ? 16 : 28}px 12px 12px`, // buraya ekledik
+      margin: `${collapsed ? 16 : 35}px 1px 1px`, // buraya ekledik
     }}
   >
     <img
       src={headerLogo}
       alt="Taskfoo Project Management Web Application"
       style={{
-        height: "440px",
+        height: "300px",
         objectFit: "contain",
       }}
     />
