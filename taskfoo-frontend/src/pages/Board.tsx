@@ -1003,8 +1003,8 @@ export default function EnhancedBoard() {
 
   // Mutation for updating task status
   const updateStatusMutation = useMutation({
-    mutationFn: ({ taskId, statusId }: { taskId: number; statusId: number }) =>
-      updateTaskStatus(taskId, statusId),
+    mutationFn: ({ taskId, statusId, version }: { taskId: number; statusId: number; version: number }) =>
+  updateTaskStatus(taskId, statusId, version),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       msg.success("Task status updated successfully" , 0.7);
@@ -1140,7 +1140,11 @@ export default function EnhancedBoard() {
                 }, 1100);
               }
 
-              updateStatusMutation.mutate({ taskId, statusId: newStatusId });
+              updateStatusMutation.mutate({ 
+  taskId, 
+  statusId: newStatusId, 
+  version: task.version 
+});
             }}
             modifiers={[restrictToWindowEdges]}
           >

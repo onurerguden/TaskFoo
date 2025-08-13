@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Entity
@@ -46,4 +47,13 @@ public class Task {
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
     private List<User> assignedUsers;
+
+    @Version              // optimistic concurrency
+    private Integer version;
+
+    @Column(name="updated_at")
+    private OffsetDateTime updatedAt;
+
+    @PreUpdate
+    public void onUpdate() { this.updatedAt = OffsetDateTime.now(); }
 }

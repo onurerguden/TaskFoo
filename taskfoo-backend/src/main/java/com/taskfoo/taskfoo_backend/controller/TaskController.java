@@ -110,8 +110,9 @@ public class TaskController {
     @PatchMapping("/api/tasks/{taskId}/status")
     public ResponseEntity<Task> changeStatus(
             @PathVariable Long taskId,
-            @RequestParam Long statusId) {
-        Task updated = taskService.changeStatus(taskId, statusId);
+            @RequestParam Long statusId,
+            @RequestParam Integer version) {
+        Task updated = taskService.changeStatus(taskId, statusId, version);
         return ResponseEntity.ok(updated);
     }
 }

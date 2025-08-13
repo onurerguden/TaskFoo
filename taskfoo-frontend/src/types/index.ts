@@ -48,4 +48,5 @@ export type Task = {
   priority: Priority;
   epic?: Epic;
   assignedUsers?: User[];
+  version: number;
 };

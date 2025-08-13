@@ -6,10 +6,12 @@ export async function listTasks(): Promise<Task[]> {
   return res.data;
 }
 
-export async function updateTaskStatus(id: number, statusId: number): Promise<Task> {
-  const res = await api.patch<Task>(`/api/tasks/api/tasks/${id}/status`, {}, {
-    params: { statusId },
-  });
+export async function updateTaskStatus(id: number, statusId: number, version: number): Promise<Task> {
+  const res = await api.patch<Task>(
+    `/api/tasks/api/tasks/${id}/status`, 
+    {}, 
+    { params: { statusId, version } }
+  );
   return res.data;
 }
 
