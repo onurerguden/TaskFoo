@@ -40,6 +40,7 @@ export default function App() {
               margin: `${collapsed ? 16 : 35}px 1px 1px`,
             }}
           >
+            
             <img
               src={headerLogo}
               alt="Taskfoo Project Management Web Application"
