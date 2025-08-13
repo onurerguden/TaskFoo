@@ -56,7 +56,9 @@ import { listStatuses } from "../api/statuses";
 import { listTasks, updateTaskStatus } from "../api/tasks";
 import { listUsers } from "../api/users";
 import { listPriorities } from "../api/priorities";
-import type { Task, Status, Priority, User } from "../types";
+import { listProjects } from "../api/projects";
+import { listEpics } from "../api/epics";
+import type { Task, Status, Priority, User, Project, Epic } from "../types";
 import PageHeaderJust from "../components/PageHeaderJust";
 
 const { Title, Text } = Typography;
@@ -80,6 +82,8 @@ interface FilterState {
   priorities: string[];
   statuses: number[];
   dueDateFilter: 'all' | 'overdue' | 'today' | 'thisWeek';
+  projectIds: number[];
+  epicIds: number[];
 }
 
 interface ColumnMetrics {
@@ -122,7 +126,7 @@ function formatDueDate(dueDate?: string): { text: string; color: string; urgent:
   return { text: due.toLocaleDateString(), color: "#64748b", urgent: false };
 }
 
-// Enhanced Status Theme with animations
+// Enhanced Status Theme with solid colors and Archive
 const STATUS_THEME: Record<string, {
   headerBg: string;
   headerText: string;
@@ -132,36 +136,44 @@ const STATUS_THEME: Record<string, {
   hoverBg: string;
 }> = {
   "To Do": {
-    headerBg: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
+    headerBg: "#3092B9", // solid blue
     headerText: "#ffffff",
-    columnBg: "#f8fafc",
-    border: "#dbeafe",
-    accent: "#3b82f6",
-    hoverBg: "#eef2ff",
+    columnBg: "#F0F9FF",
+    border: "#BFDBFE",
+    accent: "#3092B9",
+    hoverBg: "#E0F2FE",
   },
   "In Progress": {
-    headerBg: "linear-gradient(135deg, #0ea5e9 0%, #60a5fa 100%)",
+    headerBg: "#FB923C", // solid orange
     headerText: "#ffffff",
-    columnBg: "#f0f9ff",
-    border: "#bae6fd",
-    accent: "#0ea5e9",
-    hoverBg: "#e0f2fe",
+    columnBg: "#FFF7ED",
+    border: "#FED7AA",
+    accent: "#FB923C",
+    hoverBg: "#FFEDD5",
   },
   "Done": {
-    headerBg: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
+    headerBg: "#10B981", // solid green
     headerText: "#ffffff",
-    columnBg: "#f0fdf4",
-    border: "#bbf7d0",
-    accent: "#10b981",
-    hoverBg: "#ecfdf5",
+    columnBg: "#F0FDF4",
+    border: "#BBF7D0",
+    accent: "#10B981",
+    hoverBg: "#ECFDF5",
+  },
+  "Archive": {
+    headerBg: "#94A3B8", // slate-400 neutral
+    headerText: "#ffffff",
+    columnBg: "#F1F5F9",
+    border: "#E2E8F0",
+    accent: "#94A3B8",
+    hoverBg: "#E2E8F0",
   },
   "Review": {
-    headerBg: "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)",
-    headerText: "#ffffff",
-    columnBg: "#fffbeb",
-    border: "#fed7aa",
-    accent: "#f59e0b",
-    hoverBg: "#fef3c7",
+    headerBg: "#F59E0B",
+    headerText: "#111827",
+    columnBg: "#FFFBEB",
+    border: "#FED7AA",
+    accent: "#F59E0B",
+    hoverBg: "#FEF3C7",
   },
 };
 
@@ -527,15 +539,14 @@ function Column({
         }
         headStyle={{
           background: theme.headerBg,
-          borderRadius: "12px 12px 0 0",
+          borderRadius: "6px 6px 0 0",
           borderBottom: "none",
           padding: "12px 16px",
-        
         }}
          style={{
           background: isOver ? theme.hoverBg : theme.columnBg,
           border: `2px solid ${isOver ? theme.accent : theme.border}`,
-          borderRadius: 12,
+          borderRadius: 6,
           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           transform: isOver ? "scale(1.02)" : "scale(1)",
           marginBottom: 16
@@ -586,6 +597,8 @@ function AdvancedFilters({
   onChange,
   assignees,
   priorities,
+  projects,
+  epics,
   onAddTask,
   onReset,
 }: {
@@ -593,6 +606,8 @@ function AdvancedFilters({
   onChange: (filters: FilterState) => void;
   assignees: User[];
   priorities: Priority[];
+  projects: Project[];
+  epics: Epic[];
   onAddTask: () => void;
   onReset: () => void;
 }) {
@@ -607,19 +622,19 @@ function AdvancedFilters({
             <Text strong>Filters</Text>
           </Space>
           <Space>
-  <Button 
-      size="small" 
-      type="primary"
-      icon={<PlusOutlined />}
-      onClick={onAddTask}
-      style={{ background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)", border: "none" }}
-    >
-      Add Task
-    </Button>
-    <Button size="small" onClick={onReset}>
-      Reset
-    </Button>
-  </Space>
+            <Button 
+              size="small" 
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={onAddTask}
+              style={{ background: "#3092B9", border: "none" }}
+            >
+              Add Task
+            </Button>
+            <Button size="small" onClick={onReset}>
+              Reset
+            </Button>
+          </Space>
         </div>
       }
     >
@@ -701,6 +716,36 @@ function AdvancedFilters({
             <Option value="thisWeek">Due this week</Option>
           </Select>
         </Col>
+
+        <Col xs={24} sm={12} md={6}>
+          <Select
+            mode="multiple"
+            placeholder="Filter by projects"
+            value={filters.projectIds}
+            onChange={(projectIds) => onChange({ ...filters, projectIds: projectIds.map((id: number | string) => Number(id)) })}
+            style={{ width: '100%', marginBottom: 8 }}
+            maxTagCount={2}
+          >
+            {projects.map((p) => (
+              <Option key={p.id} value={p.id}>{p.name}</Option>
+            ))}
+          </Select>
+        </Col>
+
+        <Col xs={24} sm={12} md={6}>
+          <Select
+            mode="multiple"
+            placeholder="Filter by epics"
+            value={filters.epicIds}
+            onChange={(epicIds) => onChange({ ...filters, epicIds: epicIds.map((id: number | string) => Number(id)) })}
+            style={{ width: '100%', marginBottom: 8 }}
+            maxTagCount={2}
+          >
+            {epics.map((e) => (
+              <Option key={e.id} value={e.id}>{e.name}</Option>
+            ))}
+          </Select>
+        </Col>
       </Row>
     </Card>
   );
@@ -744,7 +789,24 @@ export default function EnhancedBoard() {
     assignees: [],
     priorities: [],
     statuses: [],
-    dueDateFilter: 'all'
+    dueDateFilter: 'all',
+    projectIds: [],
+    epicIds: [],
+  });
+  // Projects for filter
+  const { data: projects = [], isLoading: prjLoading, error: projectsError } = useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: listProjects,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+
+  // Epics for filter
+  const { data: epics = [], isLoading: epcLoading, error: epicsError } = useQuery<Epic[]>({
+    queryKey: ["epics"],
+    queryFn: listEpics,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // Enhanced sensors for better touch/mouse support
@@ -861,6 +923,23 @@ export default function EnhancedBoard() {
         }
       }
 
+      // Project filter
+      if (filters.projectIds.length > 0) {
+        const taskProjectId =
+          (task as any).projectId ??
+          (task as any).project_id ??
+          (task as any).epic?.project?.id ??
+          (task as any).epic?.projectId ??
+          null;
+        if (!taskProjectId || !filters.projectIds.includes(Number(taskProjectId))) return false;
+      }
+
+      // Epic filter
+      if (filters.epicIds.length > 0) {
+        const taskEpicId = (task as any).epicId ?? (task as any).epic_id ?? (task as any).epic?.id ?? null;
+        if (!taskEpicId || !filters.epicIds.includes(Number(taskEpicId))) return false;
+      }
+
       // Due date filter
       if (filters.dueDateFilter !== 'all') {
         const now = new Date();
@@ -951,22 +1030,24 @@ export default function EnhancedBoard() {
       assignees: [],
       priorities: [],
       statuses: [],
-      dueDateFilter: 'all'
+      dueDateFilter: 'all',
+      projectIds: [],
+      epicIds: [],
     });
   }, []);
 
   const activeTask = activeTaskId ? tasks.find(t => t.id === activeTaskId) : null;
-  const isLoading = stLoading || tkLoading || usLoading || prLoading;
+  const isLoading = stLoading || tkLoading || usLoading || prLoading || prjLoading || epcLoading;
 
   // Error handling
-  if (statusError || taskError || usersError || prioritiesError) {
+  if (statusError || taskError || usersError || prioritiesError || projectsError || epicsError) {
     return (
       <div style={{ padding: 24, textAlign: 'center' }}>
         <Space direction="vertical" size="large">
           <ExclamationCircleOutlined style={{ fontSize: 48, color: '#dc2626' }} />
           <Title level={3}>Failed to load board data</Title>
           <Text type="secondary">
-            {statusError?.message || taskError?.message || usersError?.message || prioritiesError?.message || 'An unexpected error occurred'}
+            {statusError?.message || taskError?.message || usersError?.message || prioritiesError?.message || projectsError?.message || epicsError?.message || 'An unexpected error occurred'}
           </Text>
           <Space>
             <Button 
@@ -977,6 +1058,8 @@ export default function EnhancedBoard() {
                 qc.invalidateQueries({ queryKey: ["tasks"] });
                 qc.invalidateQueries({ queryKey: ["users"] });
                 qc.invalidateQueries({ queryKey: ["priorities"] });
+                qc.invalidateQueries({ queryKey: ["projects"] });
+                qc.invalidateQueries({ queryKey: ["epics"] });
               }}
             >
               Retry
@@ -1005,6 +1088,8 @@ export default function EnhancedBoard() {
           onChange={setFilters}
           assignees={users}
           priorities={priorities}
+          projects={projects}
+          epics={epics}
           onAddTask={() => { window.location.assign("/tasks/new"); }}
           onReset={resetFilters}
         />
