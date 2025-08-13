@@ -18,9 +18,10 @@ import logo from "../assets/taskfoo-logo.png"; // Logo yolu
 const { Sider } = Layout;
 
 const items: MenuProps["items"] = [
-  { key: "/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
   { key: "/board", label: "Board", icon: <AppstoreOutlined /> },
 
+  { key: "/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
+  
   // Tasks
   { key: "/tasks", label: "Tasks", icon: <ProfileOutlined /> },
   { key: "/tasks/new", label: "New Task", icon: <PlusOutlined /> },
@@ -77,7 +78,7 @@ export default function Sidebar({ collapsed, onCollapse }: Props) {
     >
       {/* Logo Alanı */}
       <div
-        onClick={() => navigate("/dashboard")}
+        onClick={() => navigate("/board")}
         style={{
           // eski: margin: 12,
           // Üste extra boşluk:
