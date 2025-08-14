@@ -46,8 +46,22 @@ public class TaskService {
                 .orElseThrow(() -> new EntityNotFoundException("Task not found"));
     }
 
+    @Transactional
     public Task createTask(Task task) {
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+
+        // Audit (created: -1 -> first status OR none)
+        TaskActivity activity = new TaskActivity();
+        activity.setTaskId(saved.getId());
+        activity.setFromStatusId(TaskActivity.STATUS_CREATED);
+        activity.setToStatusId(
+                saved.getStatus() != null ? saved.getStatus().getId() : TaskActivity.STATUS_NONE
+        );
+        taskActivityRepository.save(activity);
+
+        // WS yayını
+        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_CREATED", saved));
+        return saved;
     }
 
     public Task updateTask(Long id, Task updatedTask) {
@@ -62,14 +76,29 @@ public class TaskService {
         existingTask.setStartDate(updatedTask.getStartDate());
         existingTask.setDueDate(updatedTask.getDueDate());
 
-        return taskRepository.save(existingTask);
+        Task saved = taskRepository.save(existingTask);
+        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_UPDATED", saved));
+        return saved;
     }
 
+    @Transactional
     public void deleteTask(Long id) {
-        if (!taskRepository.existsById(id)) {
-            throw new EntityNotFoundException("Task not found");
-        }
-        taskRepository.deleteById(id);
+        Task existingTask = taskRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Task not found"));
+
+        // Audit (deleted: from status -> -2)
+        TaskActivity activity = new TaskActivity();
+        activity.setTaskId(existingTask.getId());
+        activity.setFromStatusId(
+                existingTask.getStatus() != null ? existingTask.getStatus().getId() : TaskActivity.STATUS_NONE
+        );
+        activity.setToStatusId(TaskActivity.STATUS_DELETED);
+        taskActivityRepository.save(activity);
+
+        taskRepository.delete(existingTask);
+
+        // WS yayını
+        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_DELETED", existingTask));
     }
 
     @Transactional

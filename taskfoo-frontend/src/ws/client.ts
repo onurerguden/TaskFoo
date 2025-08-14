@@ -11,7 +11,7 @@ export function connectWebSocket() {
   stompClient = new Client({
     webSocketFactory: () => new SockJS("/ws"),
     reconnectDelay: 5000,
-    debug: () => {}, // sessiz
+    debug: () => {},
   });
 
   stompClient.activate();
@@ -24,27 +24,43 @@ export function disconnectWebSocket() {
   }
 }
 
-/**
- * /topic/tasks'e subscribe olur ve gelen mesajı window'a CustomEvent olarak yayar.
- * App içinde yalnızca 1 kez çağırman yeterli.
- */
-export function initTaskWs() {
-  if (!stompClient) {
-    connectWebSocket();
-  }
-  if (stompClient) {
-    stompClient.onConnect = () => {
-      stompClient!.subscribe("/topic/tasks", (msg: IMessage) => {
-        let payload: any = msg.body;
-        try {
-          payload = JSON.parse(msg.body);
-        } catch {
-          // body düz string ise olduğu gibi kalır
-        }
+export function initTaskWs(onEvent?: (evt: any) => void) {
+  if (!stompClient) connectWebSocket();
 
-        const evt = new CustomEvent("taskfoo:task-event", { detail: payload });
-        window.dispatchEvent(evt);
-      });
+  if (stompClient) {
+    const handleMessage = (msg: IMessage) => {
+      let data: any;
+      try {
+        data = JSON.parse(msg.body);
+      } catch {
+        data = msg.body;
+      }
+
+      // Normalle: { type, payload } şekline getir (backend bazen payload yerine data yolluyor olabilir)
+      const type = data?.type ?? data?.eventType ?? "UNKNOWN";
+      const payload = data?.payload ?? data?.data ?? data;
+
+      // 1) İstersen callback’e geçir
+      onEvent?.({ type, payload });
+
+      // 2) Her durumda CustomEvent fırlat -> Board/Tasks’teki effect bunu dinliyor
+      window.dispatchEvent(
+        new CustomEvent("taskfoo:task-event", {
+          detail: { type, payload },
+        })
+      );
+    };
+
+    const doSubscribe = () => {
+      stompClient!.subscribe("/topic/tasks", handleMessage);
+    };
+
+    if (stompClient.connected) {
+      doSubscribe();
+    }
+
+    stompClient.onConnect = () => {
+      doSubscribe();
     };
   }
 }

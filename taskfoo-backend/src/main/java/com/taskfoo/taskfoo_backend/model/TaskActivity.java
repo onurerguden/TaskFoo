@@ -34,4 +34,12 @@ public class TaskActivity {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
     private OffsetDateTime createdAt;
+
+    @Transient
+    public static final Long STATUS_CREATED = -1L;
+
+    @Transient
+    public static final Long STATUS_DELETED = -2L;
+
+    @Transient public static final Long STATUS_NONE    = -99L; // "no status"
 }
