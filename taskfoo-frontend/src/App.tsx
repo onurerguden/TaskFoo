@@ -12,15 +12,26 @@ import NewUser from "./pages/NewUser";
 import Users from "./pages/Users";
 import Epics from "./pages/Epics";
 import Projects from "./pages/Projects";
-import headerLogo from "./assets/header-logo.png"; 
+import headerLogo from "./assets/header-logo.png";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { connectWebSocket, disconnectWebSocket, initTaskWs } from "./ws/client"; // 👈
 
 const { Header, Content } = Layout;
 
 export default function App() {
   const { token } = theme.useToken();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Uygulama ayağa kalkınca WS bağlan + topic init; unmount'ta kopar
+  useEffect(() => {
+    connectWebSocket();
+    initTaskWs();
+
+    return () => {
+      disconnectWebSocket();
+    };
+  }, []);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -35,24 +46,16 @@ export default function App() {
             height: 40,
           }}
         >
-          <div
-            style={{
-              margin: `${collapsed ? 16 : 35}px 1px 1px`,
-            }}
-          >
-            
+          <div style={{ margin: `${collapsed ? 16 : 35}px 1px 1px` }}>
             <img
               src={headerLogo}
               alt="Taskfoo Project Management Web Application"
-              style={{
-                height: "300px",
-                objectFit: "contain",
-              }}
+              style={{ height: "300px", objectFit: "contain" }}
             />
           </div>
         </Header>
+
         <Content style={{ padding: 0, background: token.colorBgContainer }}>
-          {/* Seçili menü öğesinin rengini açık mavi yapıyoruz */}
           <style>{`
             .ant-menu-dark .ant-menu-item-selected {
               background-color: #3092B9 !important;

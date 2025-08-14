@@ -776,12 +776,30 @@ function NetworkStatus({ isOnline }: { isOnline: boolean }) {
 
 /** --- Main Enhanced Board Component --- */
 export default function EnhancedBoard() {
+
+
+
+  
   const qc = useQueryClient();
   const [msg, msgCtx] = message.useMessage();
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [editingTask, setEditingTask] = useState<TaskWithMetadata | null>(null);
   const [recentlyDoneIds, setRecentlyDoneIds] = useState<Set<number>>(new Set());
+
+
+  // Board component içinde:
+useEffect(() => {
+  const handler = (e: Event) => {
+    const evt = (e as CustomEvent).detail;
+    if (!evt) return;
+    // Ne gelirse gelsin, en doğrusu listeleri tazelemek
+    qc.invalidateQueries({ queryKey: ["tasks"] });
+  };
+
+  window.addEventListener("taskfoo:task-event", handler as EventListener);
+  return () => window.removeEventListener("taskfoo:task-event", handler as EventListener);
+}, [qc]);
 
   // Filters state
   const [filters, setFilters] = useState<FilterState>({
@@ -818,7 +836,6 @@ export default function EnhancedBoard() {
     }),
     useSensor(KeyboardSensor)
   );
-
   // Network status monitoring
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);

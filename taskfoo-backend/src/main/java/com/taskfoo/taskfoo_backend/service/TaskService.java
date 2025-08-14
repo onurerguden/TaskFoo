@@ -3,6 +3,7 @@ package com.taskfoo.taskfoo_backend.service;
 import com.taskfoo.taskfoo_backend.model.Status;
 import com.taskfoo.taskfoo_backend.model.Task;
 import com.taskfoo.taskfoo_backend.model.TaskActivity;
+import com.taskfoo.taskfoo_backend.model.TaskEvent;
 import com.taskfoo.taskfoo_backend.repository.StatusRepository;
 import com.taskfoo.taskfoo_backend.repository.TaskActivityRepository;
 import com.taskfoo.taskfoo_backend.repository.TaskRepository;
@@ -11,7 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.web.server.ResponseStatusException;
-
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.util.List;
 
 @Service
@@ -20,11 +21,16 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final StatusRepository statusRepository; // Eklendi
     private final TaskActivityRepository taskActivityRepository;
+    private final SimpMessagingTemplate broker;
 
-    public TaskService(TaskRepository taskRepository, StatusRepository statusRepository, TaskActivityRepository taskActivityRepository) {
+    public TaskService(TaskRepository taskRepository,
+                       StatusRepository statusRepository,
+                       TaskActivityRepository taskActivityRepository,
+                       SimpMessagingTemplate broker) {
         this.taskRepository = taskRepository;
         this.statusRepository = statusRepository;
         this.taskActivityRepository = taskActivityRepository;
+        this.broker = broker;
     }
 
     public List<Task> searchTasks(String keyword) {
@@ -102,6 +108,7 @@ public class TaskService {
 
         // (Opsiyonel) WebSocket broadcast burada yapılabilir
 
+        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_STATUS_CHANGED", task));
         return task;
     }
 }
