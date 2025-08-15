@@ -1,34 +1,29 @@
+// src/main/java/com/taskfoo/taskfoo_backend/service/TaskService.java
 package com.taskfoo.taskfoo_backend.service;
 
-import com.taskfoo.taskfoo_backend.model.Status;
-import com.taskfoo.taskfoo_backend.model.Task;
-import com.taskfoo.taskfoo_backend.model.TaskActivity;
-import com.taskfoo.taskfoo_backend.model.TaskEvent;
-import com.taskfoo.taskfoo_backend.repository.StatusRepository;
+import com.taskfoo.taskfoo_backend.model.*;
 import com.taskfoo.taskfoo_backend.repository.TaskActivityRepository;
 import com.taskfoo.taskfoo_backend.repository.TaskRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import jakarta.persistence.EntityNotFoundException;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
-    private final StatusRepository statusRepository; // Eklendi
     private final TaskActivityRepository taskActivityRepository;
     private final SimpMessagingTemplate broker;
 
     public TaskService(TaskRepository taskRepository,
-                       StatusRepository statusRepository,
                        TaskActivityRepository taskActivityRepository,
                        SimpMessagingTemplate broker) {
         this.taskRepository = taskRepository;
-        this.statusRepository = statusRepository;
         this.taskActivityRepository = taskActivityRepository;
         this.broker = broker;
     }
@@ -46,100 +41,89 @@ public class TaskService {
                 .orElseThrow(() -> new EntityNotFoundException("Task not found"));
     }
 
-
-
     @Transactional
     public Task createTask(Task task) {
         Task saved = taskRepository.save(task);
 
-        // Audit (created: -1 -> first status OR none)
+        // Audit: created
         TaskActivity activity = new TaskActivity();
         activity.setTaskId(saved.getId());
         activity.setFromStatusId(TaskActivity.STATUS_CREATED);
-        activity.setToStatusId(
-                saved.getStatus() != null ? saved.getStatus().getId() : TaskActivity.STATUS_NONE
-        );
+        activity.setToStatusId(saved.getStatus() != null ? saved.getStatus().getId() : TaskActivity.STATUS_NONE);
         taskActivityRepository.save(activity);
 
-        // WS yayını
+        // WS
         broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_CREATED", saved));
         return saved;
     }
 
-    public Task updateTask(Long id, Task updatedTask) {
-        Task existingTask = taskRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Task not found"));
-
-        existingTask.setTitle(updatedTask.getTitle());
-        existingTask.setDescription(updatedTask.getDescription());
-        existingTask.setStatus(updatedTask.getStatus());
-        existingTask.setPriority(updatedTask.getPriority());
-        existingTask.setEpic(updatedTask.getEpic());
-        existingTask.setStartDate(updatedTask.getStartDate());
-        existingTask.setDueDate(updatedTask.getDueDate());
-
-        Task saved = taskRepository.save(existingTask);
+    // Genel amaçlı save (PUT update sonrası)
+    @Transactional
+    public Task save(Task task) {
+        Task saved = taskRepository.saveAndFlush(task);
         broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_UPDATED", saved));
         return saved;
     }
 
     @Transactional
     public void deleteTask(Long id) {
-        Task existingTask = taskRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Task not found"));
+        Task existingTask = getTaskById(id);
 
-        // Audit (deleted: from status -> -2)
         TaskActivity activity = new TaskActivity();
         activity.setTaskId(existingTask.getId());
-        activity.setFromStatusId(
-                existingTask.getStatus() != null ? existingTask.getStatus().getId() : TaskActivity.STATUS_NONE
-        );
+        activity.setFromStatusId(existingTask.getStatus() != null ? existingTask.getStatus().getId() : TaskActivity.STATUS_NONE);
         activity.setToStatusId(TaskActivity.STATUS_DELETED);
         taskActivityRepository.save(activity);
 
         taskRepository.delete(existingTask);
-
-        // WS yayını
         broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_DELETED", existingTask));
     }
 
     @Transactional
     public Task changeStatus(Long taskId, Long statusId, Integer version) {
-        // 1) Task'ı bul
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
-        // 2) Versiyon kontrolü
         if (!task.getVersion().equals(version)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Task was updated by another user");
         }
 
-        // 3) Eski statü
         Long fromStatusId = (task.getStatus() != null) ? task.getStatus().getId() : null;
 
-        // 4) Yeni statü
-        Status newStatus = statusRepository.findById(statusId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status not found"));
+        // Status'i controller yükledi, burada sadece id set'i beklemiyoruz; controller'dan entity geldiği için
+        // bu methodun imzasını değiştirmedik; statusId değişikliğini repository tarafında trigger'lıyoruz:
+        Status newStatus = new Status();
+        newStatus.setId(statusId);
 
-        // (Opsiyonel) Aynı statüye geçişse no-op
         if (fromStatusId != null && fromStatusId.equals(newStatus.getId())) {
             return task;
         }
 
-        // 5) Güncelle
         task.setStatus(newStatus);
-        taskRepository.saveAndFlush(task); // versiyonu ve updated_at'i hemen günceller
+        taskRepository.saveAndFlush(task);
 
-        // 6) Audit kaydı
         TaskActivity activity = new TaskActivity();
         activity.setTaskId(task.getId());
         activity.setFromStatusId(fromStatusId);
         activity.setToStatusId(statusId);
         taskActivityRepository.save(activity);
 
-        // (Opsiyonel) WebSocket broadcast burada yapılabilir
-
         broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_STATUS_CHANGED", task));
         return task;
     }
+
+    @Transactional
+    public Task replaceAssignees(Task task, List<User> users, Integer version) {
+        if (!task.getVersion().equals(version)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Task was updated by another user");
+        }
+        task.setAssignedUsers(users);
+        Task saved = taskRepository.saveAndFlush(task);
+        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_UPDATED", saved));
+        return saved;
+    }
+
+
+
+
 }

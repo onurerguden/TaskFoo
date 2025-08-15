@@ -19,20 +19,6 @@ public class TaskMapper {
         return new TaskListItemResponse(
                 t.getId(),
                 t.getTitle(),
-                t.getStartDate(),
-                t.getDueDate(),
-                t.getStatus()   == null ? null : new IdNameDto(t.getStatus().getId(),   t.getStatus().getName()),
-                t.getPriority() == null ? null : new PriorityBriefDto(t.getPriority().getId(), t.getPriority().getName(), t.getPriority().getColor()),
-                t.getEpic()     == null ? null : new IdNameDto(t.getEpic().getId(),     t.getEpic().getName()),
-                mapAssignees(t),
-                t.getVersion()
-        );
-    }
-
-    public TaskDetailResponse toDetail(Task t) {
-        return new TaskDetailResponse(
-                t.getId(),
-                t.getTitle(),
                 t.getDescription(),
                 t.getStartDate(),
                 t.getDueDate(),

@@ -1,34 +1,76 @@
 import api from "./client";
-import type { Task } from "../types";
 
-export async function listTasks(): Promise<Task[]> {
-  const res = await api.get<Task[]>("/api/tasks");
+/** ---------------- DTO TYPES (Backend sözleşmesi) ---------------- */
+export type IdName = { id: number; name: string };
+
+export type PriorityBrief = {
+  id: number;
+  name: string;
+  color?: string | null;
+};
+
+export type UserBrief = {
+  id: number;
+  fullName: string;
+};
+
+/** /api/tasks -> liste satırı DTO */
+export type TaskListItemResponse = {
+  id: number;
+  title: string;
+  description?: string | null;
+  startDate: string;
+  dueDate: string;
+  status: IdName | null;
+  priority: PriorityBrief | null;
+  epic: IdName | null;
+  assignees: UserBrief[];
+  version: number;
+};
+
+/** POST /api/tasks body DTO */
+export type CreateTaskRequest = {
+  title: string;
+  description?: string;
+  statusId: number;
+  priorityId: number;
+  epicId?: number;
+  startDate: string; // YYYY-MM-DD
+  dueDate: string;   // YYYY-MM-DD
+  assigneeIds?: number[];
+};
+
+/** ---------------- API CALLS (her zaman DTO döndürür) ---------------- */
+export async function listTasks(): Promise<TaskListItemResponse[]> {
+  const res = await api.get<TaskListItemResponse[]>("/api/tasks");
   return res.data;
 }
 
-export async function updateTaskStatus(id: number, statusId: number, version: number): Promise<Task> {
-  const res = await api.patch<Task>(
-    `/api/tasks/api/tasks/${id}/status`, 
-    {}, 
-    { params: { statusId, version } }
+export async function updateTaskStatus(
+  id: number,
+  statusId: number,
+  version: number
+): Promise<TaskListItemResponse> {
+  const res = await api.patch<TaskListItemResponse>(
+    `/api/tasks/${id}/status`,
+    { statusId, version } // body JSON
   );
   return res.data;
 }
 
-export async function createTask(body: {
-  title: string;
-  description?: string;
-  status: { id: number };
-  priority: { id: number };
-  epic?: { id: number };
-  startDate?: string;
-  dueDate?: string;
-}): Promise<Task> {
-  const res = await api.post<Task>("/api/tasks", body);
+export async function createTask(body: CreateTaskRequest): Promise<TaskListItemResponse> {
+  const res = await api.post<TaskListItemResponse>("/api/tasks", body);
   return res.data;
 }
 
-export async function assignUsers(taskId: number, userIds: number[]) {
-  const res = await api.put<Task>(`/api/tasks/${taskId}/assign-users`, userIds);
+export async function assignUsers(
+  taskId: number,
+  userIds: number[],
+  version: number
+): Promise<TaskListItemResponse> {
+  const res = await api.put<TaskListItemResponse>(
+    `/api/tasks/${taskId}/assign-users`,
+    { userIds, version } // body JSON
+  );
   return res.data;
 }

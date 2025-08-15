@@ -34,7 +34,7 @@ import { listPriorities } from "../api/priorities";
 import { listEpics } from "../api/epics";
 import { listProjects } from "../api/projects";
 import { listUsers } from "../api/users";
-import { createTask, assignUsers } from "../api/tasks";
+import { createTask, type CreateTaskRequest } from "../api/tasks";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -57,11 +57,30 @@ export default function NewTask() {
 
   const [form] = Form.useForm<FormValues>();
 
-  const { data: statuses = [], isLoading: stL } = useQuery({ queryKey: ["statuses"], queryFn: listStatuses });
-  const { data: priorities = [], isLoading: prL } = useQuery({ queryKey: ["priorities"], queryFn: listPriorities });
-  const { data: projects = [], isLoading: pjL } = useQuery({ queryKey: ["projects"], queryFn: listProjects });
-  const { data: epicsAll = [], isLoading: epL } = useQuery({ queryKey: ["epics"], queryFn: listEpics });
-  const { data: users = [], isLoading: usL } = useQuery({ queryKey: ["users"], queryFn: listUsers });
+  const { data: statuses = [], isLoading: stL } = useQuery({ 
+    queryKey: ["statuses"], 
+    queryFn: listStatuses 
+  });
+  
+  const { data: priorities = [], isLoading: prL } = useQuery({ 
+    queryKey: ["priorities"], 
+    queryFn: listPriorities 
+  });
+  
+  const { data: projects = [], isLoading: pjL } = useQuery({ 
+    queryKey: ["projects"], 
+    queryFn: listProjects 
+  });
+  
+  const { data: epicsAll = [], isLoading: epL } = useQuery({ 
+    queryKey: ["epics"], 
+    queryFn: listEpics 
+  });
+  
+  const { data: users = [], isLoading: usL } = useQuery({ 
+    queryKey: ["users"], 
+    queryFn: listUsers 
+  });
 
   const selectedProjectId = Form.useWatch("projectId", form);
   const epics = useMemo(() => {
@@ -72,31 +91,82 @@ export default function NewTask() {
   const creating = useMutation({
     mutationFn: async (v: FormValues) => {
       const [start, due] = v.dates ?? [];
-      const created = await createTask({
-        title: v.title,
-        description: v.description,
-        status: { id: v.statusId },
-        priority: { id: v.priorityId },
-        epic: v.epicId ? { id: v.epicId } : undefined,
-        startDate: start ? start.format("YYYY-MM-DD") : undefined,
-        dueDate: due ? due.format("YYYY-MM-DD") : undefined,
-      });
-      if (v.assigneeIds?.length) {
-        await assignUsers(created.id as number, v.assigneeIds);
-      }
-      return created;
+      
+      // Backend startDate ve dueDate zorunlu kılıyor, default değerler veriyoruz
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // DTO formatında request oluştur
+      const requestData: CreateTaskRequest = {
+        title: v.title.trim(),
+        description: v.description?.trim() || undefined,
+        statusId: v.statusId,
+        priorityId: v.priorityId,
+        epicId: v.epicId || undefined,
+        startDate: start ? start.format("YYYY-MM-DD") : today,
+        dueDate: due ? due.format("YYYY-MM-DD") : today,
+        assigneeIds: v.assigneeIds && v.assigneeIds.length > 0 ? v.assigneeIds : undefined,
+      };
+
+      console.log("Creating task with data:", requestData);
+      return await createTask(requestData);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Cache'i güncelle
       qc.invalidateQueries({ queryKey: ["tasks"] });
-      message.success("✅ Task created successfully");
+      
+      // Custom event dispatch et (Board.tsx'teki listener için)
+      window.dispatchEvent(new CustomEvent("taskfoo:task-event", {
+        detail: { type: "created", taskId: data.id }
+      }));
+      
+      message.success(`✅ Task "${data.title}" created successfully!`);
       nav("/tasks");
     },
-    onError: (e: any) => {
-      message.error(e?.response?.data?.message ?? "Failed to create task");
+    onError: (error: any) => {
+      console.error("Task creation failed:", error);
+      console.error("Error response:", error?.response?.data);
+      console.error("Error status:", error?.response?.status);
+      
+      // Backend'den gelen detaylı hata mesajı
+      let errorMessage = "Failed to create task. Please try again.";
+      
+      if (error?.response?.data) {
+        const data = error.response.data;
+        if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (data.errors && Array.isArray(data.errors)) {
+          errorMessage = data.errors.join(", ");
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(errorMessage);
     },
   });
 
   const loading = stL || prL || pjL || epL || usL || creating.isPending;
+
+  // Form validation
+  const validateForm = () => {
+    return form.validateFields().catch(() => {
+      message.warning("Please fill in all required fields correctly.");
+      return Promise.reject();
+    });
+  };
+
+  const handleSubmit = async (values: FormValues) => {
+    try {
+      await validateForm();
+      await creating.mutateAsync(values);
+    } catch (error) {
+      // Error handling is done in mutation callbacks
+    }
+  };
 
   return (
     <div style={{ 
@@ -104,9 +174,8 @@ export default function NewTask() {
       background: "#f8f9fa",
       padding: "0"
     }}>
-      {/* Header Section */}
-     <PageHeaderIcon title="Create New Task" />
-      {/* Main Content */}
+      <PageHeaderIcon title="Create New Task" />
+      
       <div style={{ 
         maxWidth: "1200px", 
         margin: "0 auto",
@@ -115,8 +184,10 @@ export default function NewTask() {
         <Form
           form={form}
           layout="vertical"
-          onFinish={(v) => creating.mutate(v)}
+          onFinish={handleSubmit}
           disabled={loading}
+          validateTrigger={["onBlur", "onChange"]}
+          scrollToFirstError
         >
           <Row gutter={[24, 24]}>
             {/* Left Column */}
@@ -135,16 +206,24 @@ export default function NewTask() {
                   border: "1px solid #e5e7eb",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
                 }}
-                headStyle={{
-                  background: "#f8f9fa",
-                  borderBottom: "1px solid #e5e7eb"
+                styles={{
+                  header: {
+                    background: "#f8f9fa",
+                    borderBottom: "1px solid #e5e7eb"
+                  },
+                  body: { padding: "24px" }
                 }}
-                bodyStyle={{ padding: "24px" }}
               >
                 <Form.Item
                   name="title"
-                  label={<Text strong style={{ color: "#374151" }}>Task Title</Text>}
-                  rules={[{ required: true, message: "Task title is required" }, { min: 3, message: "Minimum 3 characters" }]}
+                  label={<Text strong style={{ color: "#374151" }}>Task Title *</Text>}
+                  rules={[
+                    { required: true, message: "Task title is required" },
+                    { min: 3, message: "Title must be at least 3 characters" },
+                    { max: 120, message: "Title cannot exceed 120 characters" },
+                    { whitespace: true, message: "Title cannot be empty" }
+                  ]}
+                  hasFeedback
                 >
                   <Input 
                     placeholder="e.g. Implement User Authentication API" 
@@ -161,10 +240,15 @@ export default function NewTask() {
                 <Form.Item 
                   name="description" 
                   label={<Text strong style={{ color: "#374151" }}>Description</Text>}
+                  rules={[
+                    { max: 2000, message: "Description cannot exceed 2000 characters" }
+                  ]}
                 >
                   <Input.TextArea 
                     rows={6} 
                     placeholder="Write detailed description about the task..."
+                    maxLength={2000}
+                    showCount
                     style={{
                       borderColor: "#d1d5db",
                       borderRadius: "6px"
@@ -186,17 +270,22 @@ export default function NewTask() {
                   border: "1px solid #e5e7eb",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
                 }}
-                headStyle={{
-                  background: "#f8f9fa",
-                  borderBottom: "1px solid #e5e7eb"
+                styles={{
+                  header: {
+                    background: "#f8f9fa",
+                    borderBottom: "1px solid #e5e7eb"
+                  },
+                  body: { padding: "24px" }
                 }}
-                bodyStyle={{ padding: "24px" }}
               >
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item 
                       name="dates" 
-                      label={<Text strong style={{ color: "#374151" }}>Start and Due Date</Text>}
+                      label={<Text strong style={{ color: "#374151" }}>Start and Due Date *</Text>}
+                      rules={[
+                        { required: true, message: "Please select start and due dates" }
+                      ]}
                     >
                       <RangePicker 
                         style={{ 
@@ -223,6 +312,13 @@ export default function NewTask() {
                         loading={usL}
                         size="large"
                         maxTagCount="responsive"
+                        filterOption={(input, option) => {
+                          if (!option || !input) return true;
+                          const searchText = typeof option.label === 'string' 
+                            ? option.label 
+                            : (option as any).children || '';
+                          return searchText.toLowerCase().includes(input.toLowerCase());
+                        }}
                         style={{
                           borderRadius: "6px"
                         }}
@@ -230,8 +326,15 @@ export default function NewTask() {
                           value: u.id,
                           label: (
                             <Space>
-                              <Avatar size="small" icon={<UserOutlined />} style={{ background: "#3b82f6" }} />
-                              {u.name}
+                              <Avatar 
+                                size="small" 
+                                icon={<UserOutlined />} 
+                                style={{ 
+                                  background: `hsl(${u.id * 137.508}deg, 65%, 45%)`,
+                                  fontSize: 11
+                                }} 
+                              />
+                              {(u.name ?? "").trim() + (u.surname ? ` ${u.surname}` : "")}
                             </Space>
                           ),
                         }))}
@@ -266,15 +369,23 @@ export default function NewTask() {
               >
                 <Form.Item
                   name="statusId"
-                  label={<Text strong style={{ color: "#374151" }}>Status</Text>}
-                  rules={[{ required: true, message: "Please select status" }]}
+                  label={<Text strong style={{ color: "#374151" }}>Status *</Text>}
+                  rules={[{ required: true, message: "Please select a status" }]}
                   style={{ marginBottom: "20px" }}
+                  hasFeedback
                 >
                   <Select
                     showSearch
                     placeholder="Select status"
                     loading={stL}
                     size="large"
+                    filterOption={(input, option) => {
+                      if (!option || !input) return true;
+                      const searchText = typeof option.label === 'string' 
+                        ? option.label 
+                        : option.value?.toString() || '';
+                      return searchText.toLowerCase().includes(input.toLowerCase());
+                    }}
                     style={{
                       borderRadius: "6px"
                     }}
@@ -291,14 +402,22 @@ export default function NewTask() {
 
                 <Form.Item
                   name="priorityId"
-                  label={<Text strong style={{ color: "#374151" }}>Priority</Text>}
-                  rules={[{ required: true, message: "Please select priority" }]}
+                  label={<Text strong style={{ color: "#374151" }}>Priority *</Text>}
+                  rules={[{ required: true, message: "Please select a priority" }]}
+                  hasFeedback
                 >
                   <Select
                     showSearch
                     placeholder="Select priority"
                     loading={prL}
                     size="large"
+                    filterOption={(input, option) => {
+                      if (!option || !input) return true;
+                      const searchText = typeof option.label === 'string' 
+                        ? option.label 
+                        : option.value?.toString() || '';
+                      return searchText.toLowerCase().includes(input.toLowerCase());
+                    }}
                     style={{
                       borderRadius: "6px"
                     }}
@@ -336,11 +455,13 @@ export default function NewTask() {
                   border: "1px solid #e5e7eb",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
                 }}
-                headStyle={{
-                  background: "#f8f9fa",
-                  borderBottom: "1px solid #e5e7eb"
+                styles={{
+                  header: {
+                    background: "#f8f9fa",
+                    borderBottom: "1px solid #e5e7eb"
+                  },
+                  body: { padding: "24px" }
                 }}
-                bodyStyle={{ padding: "24px" }}
               >
                 <Form.Item 
                   name="projectId" 
@@ -353,8 +474,19 @@ export default function NewTask() {
                     placeholder="Select project (optional)"
                     loading={pjL}
                     size="large"
+                    filterOption={(input, option) => {
+                      if (!option || !input) return true;
+                      const searchText = typeof option.label === 'string' 
+                        ? option.label 
+                        : option.value?.toString() || '';
+                      return searchText.toLowerCase().includes(input.toLowerCase());
+                    }}
                     style={{
                       borderRadius: "6px"
+                    }}
+                    onChange={() => {
+                      // Clear epic when project changes
+                      form.setFieldValue("epicId", undefined);
                     }}
                     options={projects.map((p: any) => ({
                       value: p.id,
@@ -373,12 +505,19 @@ export default function NewTask() {
                   label={<Text strong style={{ color: "#374151" }}>Epic</Text>}
                 >
                   <Select
-                    allowClear
                     showSearch
-                    placeholder={selectedProjectId ? "Select epic" : "Select project first"}
+                    placeholder={selectedProjectId ? "Select epic (optional)" : "Select project first"}
                     loading={epL}
-                    disabled={!selectedProjectId}
+                    disabled={!selectedProjectId || epL}
+                    allowClear={selectedProjectId ? true : false}
                     size="large"
+                    filterOption={(input, option) => {
+                      if (!option || !input) return true;
+                      const searchText = typeof option.label === 'string' 
+                        ? option.label 
+                        : option.value?.toString() || '';
+                      return searchText.toLowerCase().includes(input.toLowerCase());
+                    }}
                     style={{
                       borderRadius: "6px"
                     }}
@@ -409,6 +548,7 @@ export default function NewTask() {
                 size="large"
                 onClick={() => nav(-1)}
                 icon={<CloseOutlined />}
+                disabled={creating.isPending}
                 style={{ 
                   minWidth: "120px",
                   borderColor: "#d1d5db",
@@ -432,7 +572,7 @@ export default function NewTask() {
                   boxShadow: "0 2px 4px rgba(59, 130, 246, 0.3)"
                 }}
               >
-                Save
+                {creating.isPending ? "Creating..." : "Create Task"}
               </Button>
             </div>
           </Card>

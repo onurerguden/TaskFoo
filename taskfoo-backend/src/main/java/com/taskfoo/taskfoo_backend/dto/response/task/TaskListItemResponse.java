@@ -8,6 +8,7 @@ import java.util.List;
 public record TaskListItemResponse(
         Long id,
         String title,
+        String description,
         LocalDate startDate,
         LocalDate dueDate,
         IdNameDto status,

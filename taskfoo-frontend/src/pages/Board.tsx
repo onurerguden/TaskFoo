@@ -1,6 +1,10 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import "/src/Board.css";
+
+
+
+
 import {
   DndContext,
   type DragEndEvent,
@@ -53,24 +57,26 @@ import {
 } from "@ant-design/icons";
 
 import { listStatuses } from "../api/statuses";
-import { listTasks, updateTaskStatus } from "../api/tasks";
+import { listTasks, updateTaskStatus, type TaskListItemResponse, type UserBrief } from "../api/tasks";
 import { listUsers } from "../api/users";
 import { listPriorities } from "../api/priorities";
 import { listProjects } from "../api/projects";
 import { listEpics } from "../api/epics";
-import type { Task, Status, Priority, User, Project, Epic } from "../types";
+import type { Status, Priority, User, Project, Epic } from "../types";
 import PageHeaderJust from "../components/PageHeaderJust";
+
+
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
 /** --- Types --- */
-interface TaskWithMetadata extends Omit<Task, 'priority'> {
-  priority: Priority;
-  priorityLevel?: number;
+interface TaskWithMetadata extends Omit<TaskListItemResponse, 'priority' | 'assignees'> {
+  // Priority from backend { id, name, color } + UI level
+  priority: Priority & { level?: number };
+  // UI expects assignedUsers: {id, name, surname}
   assignedUsers?: User[];
-  dueDate?: string;
   attachments?: number;
   tags?: string[];
   subtasks?: { total: number; completed: number };
@@ -101,7 +107,7 @@ function initials(name?: string, surname?: string) {
   return (i1 + i2 || a.slice(0, 2) || "?").toUpperCase();
 }
 
-function truncate(s?: string, n = 120) {
+function truncate(s: string | null | undefined, n = 120) {
   if (!s) return "-";
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }
@@ -124,6 +130,14 @@ function formatDueDate(dueDate?: string): { text: string; color: string; urgent:
   if (diffDays <= 7) return { text: `${diffDays}d left`, color: "#059669", urgent: false };
   
   return { text: due.toLocaleDateString(), color: "#64748b", urgent: false };
+}
+
+function splitFullName(fullName?: string): { name: string; surname?: string } {
+  if (!fullName) return { name: "", surname: "" };
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return { name: parts[0], surname: "" };
+  const surname = parts.pop();
+  return { name: parts.join(" "), surname };
 }
 
 // Enhanced Status Theme with solid colors and Archive
@@ -827,6 +841,15 @@ useEffect(() => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+  // Map epicId -> projectId (since TaskListItemResponse doesn't include project)
+  const epicToProjectId = useMemo(() => {
+    const map: Record<number, number | undefined> = {};
+    for (const e of epics as any[]) {
+      if (e?.id != null) map[e.id] = e.project?.id;
+    }
+    return map;
+  }, [epics]);
+
   // Enhanced sensors for better touch/mouse support
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -875,7 +898,7 @@ useEffect(() => {
   });
 
   // Tasks
-  const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery<Task[]>({
+const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery<TaskListItemResponse[]>({
     queryKey: ["tasks"],
     queryFn: listTasks,
     retry: 3,
@@ -883,19 +906,25 @@ useEffect(() => {
   });
 
   // Transform Task[] to TaskWithMetadata[] 
-  const transformTasksToMetadata = (tasks: Task[]): TaskWithMetadata[] => {
-    return tasks.map(task => ({
-      ...task,
-      priority: task.priority
-        ? { ...task.priority, level: getPriorityLevel(task.priority.name) }
-        : { id: 0, name: "Low", color: "#64748b", level: 1 },
-      // Not: assignedUsers backend’ten geliyorsa olduğu gibi kullan; gelmiyorsa boş kalır
-      assignedUsers: (task as any).assignedUsers ?? [],
-      attachments: (task as any).attachments ?? 0,
-      tags: (task as any).tags ?? [],
-      subtasks: (task as any).subtasks,
-    }));
-  };
+ const transformTasksToMetadata = (tasks: TaskListItemResponse[]): TaskWithMetadata[] => {
+  return tasks.map(task => ({
+    ...task,
+    priority: task.priority
+      ? { 
+          ...task.priority, 
+          color: typeof task.priority.color === "string" && task.priority.color !== null ? task.priority.color : "#64748b",
+          level: getPriorityLevel(task.priority.name) 
+        }
+      : { id: 0, name: "Low", color: "#64748b", level: 1 },
+    assignedUsers: (task.assignees ?? []).map((a: UserBrief) => {
+      const { name, surname } = splitFullName(a.fullName);
+      return { id: a.id, name, surname } as unknown as User;
+    }),
+    attachments: (task as any).attachments ?? 0,
+    tags: (task as any).tags ?? [],
+    subtasks: (task as any).subtasks,
+  }));
+};
 
   const getPriorityLevel = (priorityName: string): number => {
     switch (priorityName) {
@@ -934,21 +963,21 @@ useEffect(() => {
       }
 
       // Status filter
-      if (filters.statuses.length > 0) {
-        if (!filters.statuses.includes(task.status.id)) {
-          return false;
-        }
-      }
+   if (filters.statuses.length > 0) {
+  const sid = task.status?.id;
+  if (!sid || !filters.statuses.includes(Number(sid))) {
+    return false;
+  }
+}
 
-      // Project filter
+      // Project filter (derive via epic -> project map)
       if (filters.projectIds.length > 0) {
-        const taskProjectId =
-          (task as any).projectId ??
-          (task as any).project_id ??
-          (task as any).epic?.project?.id ??
-          (task as any).epic?.projectId ??
-          null;
-        if (!taskProjectId || !filters.projectIds.includes(Number(taskProjectId))) return false;
+        // Wait for epics to load before applying project filter; otherwise we might wrongly exclude everything
+        if (epcLoading) return true;
+
+        const epicId = task.epic?.id;
+        const projectId = epicId != null ? epicToProjectId[epicId] : undefined;
+        if (!projectId || !filters.projectIds.includes(Number(projectId))) return false;
       }
 
       // Epic filter
@@ -1134,7 +1163,7 @@ useEffect(() => {
 
               // Optimistic update
               const newStatusObj = statuses.find(s => s.id === newStatusId);
-              qc.setQueryData(["tasks"], (oldTasks: Task[] | undefined) => {
+             qc.setQueryData<TaskListItemResponse[]>(["tasks"], (oldTasks) => {
                 if (!oldTasks) return oldTasks;
                 return oldTasks.map(t => 
                   t.id === taskId ? { ...t, status: newStatusObj ?? t.status } : t

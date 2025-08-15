@@ -1,120 +1,122 @@
+// src/main/java/com/taskfoo/taskfoo_backend/controller/TaskController.java
 package com.taskfoo.taskfoo_backend.controller;
 
-import com.taskfoo.taskfoo_backend.model.Task;
-import com.taskfoo.taskfoo_backend.model.User;
-import com.taskfoo.taskfoo_backend.repository.UserRepository;
+import com.taskfoo.taskfoo_backend.dto.request.task.AssignUsersRequest;
+import com.taskfoo.taskfoo_backend.dto.request.task.CreateTaskRequest;
+import com.taskfoo.taskfoo_backend.dto.request.task.UpdateTaskRequest;
+import com.taskfoo.taskfoo_backend.dto.request.task.UpdateTaskStatusRequest;
+import com.taskfoo.taskfoo_backend.dto.response.task.TaskListItemResponse;
+import com.taskfoo.taskfoo_backend.mapper.TaskMapper;
+import com.taskfoo.taskfoo_backend.model.*;
+import com.taskfoo.taskfoo_backend.repository.*;
 import com.taskfoo.taskfoo_backend.service.TaskService;
-
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("api/tasks")
 public class TaskController {
 
     private final TaskService taskService;
+    private final StatusRepository statusRepository;
+    private final PriorityRepository priorityRepository;
+    private final EpicRepository epicRepository;
     private final UserRepository userRepository;
+    private final TaskMapper mapper;
 
-    public TaskController(TaskService taskService, UserRepository userRepository) {
+    public TaskController(TaskService taskService,
+                          StatusRepository statusRepository,
+                          PriorityRepository priorityRepository,
+                          EpicRepository epicRepository,
+                          UserRepository userRepository,
+                          TaskMapper mapper) {
         this.taskService = taskService;
+        this.statusRepository = statusRepository;
+        this.priorityRepository = priorityRepository;
+        this.epicRepository = epicRepository;
         this.userRepository = userRepository;
+        this.mapper = mapper;
     }
 
-    // GET all tasks
+    // LIST
     @GetMapping
-    public List<Task> getAllTasks() {
-        return taskService.getAllTasks();
+    public List<TaskListItemResponse> getAll() {
+        return taskService.getAllTasks().stream()
+                .map(mapper::toListItem)
+                .toList();
     }
 
-
+    // GET by id (liste item dto dönüyoruz — şimdilik tek dto)
     @GetMapping("/{id}")
-    public Task getTaskById(@PathVariable Long id) {
-        return taskService.getTaskById(id);
+    public TaskListItemResponse getById(@PathVariable Long id) {
+        Task t = taskService.getTaskById(id);
+        return mapper.toListItem(t);
     }
 
-
+    // CREATE (DTO in, DTO out)
     @PostMapping
-    public Task createTask(@RequestBody Task task) {
-        return taskService.createTask(task);
+    public TaskListItemResponse create(@Valid @RequestBody CreateTaskRequest req) {
+        Status status   = (req.statusId()   != null) ? statusRepository.findById(req.statusId()).orElse(null) : null;
+        Priority priority = (req.priorityId() != null) ? priorityRepository.findById(req.priorityId()).orElse(null) : null;
+        Epic epic       = (req.epicId()     != null) ? epicRepository.findById(req.epicId()).orElse(null) : null;
+        List<User> assignees = (req.assigneeIds() == null || req.assigneeIds().isEmpty())
+                ? List.of()
+                : userRepository.findAllById(req.assigneeIds());
+
+        Task t = new Task();
+        mapper.applyCreate(t, req, status, priority, epic, assignees);
+        Task saved = taskService.createTask(t);
+        return mapper.toListItem(saved);
     }
 
-    // PUT update task
+    // UPDATE (partial update dto)
     @PutMapping("/{id}")
-    public Task updateTask(@PathVariable Long id, @RequestBody Task task) {
-        return taskService.updateTask(id, task);
+    public TaskListItemResponse update(@PathVariable Long id, @Valid @RequestBody UpdateTaskRequest req) {
+        Status status   = (req.statusId()   != null) ? statusRepository.findById(req.statusId()).orElse(null) : null;
+        Priority priority = (req.priorityId() != null) ? priorityRepository.findById(req.priorityId()).orElse(null) : null;
+        Epic epic       = (req.epicId()     != null) ? epicRepository.findById(req.epicId()).orElse(null) : null;
+        List<User> assignees = (req.assigneeIds() == null) ? null : userRepository.findAllById(req.assigneeIds());
+
+        Task existing = taskService.getTaskById(id);
+        mapper.applyUpdate(existing, req, status, priority, epic, assignees);
+        Task saved = taskService.save(existing);
+        return mapper.toListItem(saved);
     }
 
-    // DELETE task
+    // DELETE
     @DeleteMapping("/{id}")
-    public void deleteTask(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         taskService.deleteTask(id);
+        return ResponseEntity.noContent().build();
     }
 
-    // PUT assign multiple users to a task
+    // ASSIGN MULTIPLE USERS (DTO in, DTO out)
     @PutMapping("/{taskId}/assign-users")
-    public Task assignUsersToTask(
-            @PathVariable Long taskId,
-            @RequestBody List<Long> userIds
-    ) {
+    public TaskListItemResponse assignUsers(@PathVariable Long taskId,
+                                            @Valid @RequestBody AssignUsersRequest req) {
         Task task = taskService.getTaskById(taskId);
-        if (task == null) return null;
-
-        List<User> users = userIds.stream()
-                .map(userRepository::findById)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(Collectors.toList());
-
-        task.setAssignedUsers(users);
-        return taskService.createTask(task); // re-save with assigned users
+        List<User> users = userRepository.findAllById(req.userIds());
+        // versiyon çakışması varsa service içinde yakalayacağız
+        Task saved = taskService.replaceAssignees(task, users, req.version());
+        return mapper.toListItem(saved);
     }
 
-    @PatchMapping("/{taskId}/add-user/{userId}")
-    public Task addUserToTask(@PathVariable Long taskId, @PathVariable Long userId) {
-        Task task = taskService.getTaskById(taskId);
-        User user = userRepository.findById(userId).orElse(null);
-
-        if (task == null || user == null) return null;
-
-        List<User> assignedUsers = task.getAssignedUsers();
-        if (!assignedUsers.contains(user)) {
-            assignedUsers.add(user);
-        }
-
-        task.setAssignedUsers(assignedUsers);
-        return taskService.createTask(task); // save updated task
+    // CHANGE STATUS (body JSON //api/tasks/{id}/status)
+    @PatchMapping("/{taskId}/status")
+    public TaskListItemResponse changeStatus(@PathVariable Long taskId,
+                                             @Valid @RequestBody UpdateTaskStatusRequest req) {
+        Task updated = taskService.changeStatus(taskId, req.statusId(), req.version());
+        return mapper.toListItem(updated);
     }
 
-
-    @PatchMapping("/{taskId}/remove-user/{userId}")
-    public Task removeUserFromTask(@PathVariable Long taskId, @PathVariable Long userId) {
-        Task task = taskService.getTaskById(taskId);
-        User user = userRepository.findById(userId).orElse(null);
-
-        if (task == null || user == null) return null;
-
-        task.getAssignedUsers().remove(user);
-        return taskService.createTask(task);
-    }
-
-
+    // SEARCH (liste dto)
     @GetMapping("/search")
-    public List<Task> searchTasks(@RequestParam String q) {
-        return taskService.searchTasks(q);
-    }
-
-
-
-    @PatchMapping("/api/tasks/{taskId}/status")
-    public ResponseEntity<Task> changeStatus(
-            @PathVariable Long taskId,
-            @RequestParam Long statusId,
-            @RequestParam Integer version) {
-        Task updated = taskService.changeStatus(taskId, statusId, version);
-        return ResponseEntity.ok(updated);
+    public List<TaskListItemResponse> search(@RequestParam String q) {
+        return taskService.searchTasks(q).stream()
+                .map(mapper::toListItem)
+                .toList();
     }
 }
