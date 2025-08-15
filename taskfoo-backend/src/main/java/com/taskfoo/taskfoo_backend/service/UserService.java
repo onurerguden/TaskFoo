@@ -1,11 +1,12 @@
 package com.taskfoo.taskfoo_backend.service;
 
+import com.taskfoo.taskfoo_backend.dto.response.common.UserBriefDto;
+import com.taskfoo.taskfoo_backend.mapper.UserMapper;
 import com.taskfoo.taskfoo_backend.model.User;
 import com.taskfoo.taskfoo_backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserService {
@@ -16,16 +17,25 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    /** GET /api/users -> UserBriefDto list */
+    public List<UserBriefDto> getAllUsersBrief() {
+        return userRepository.findAll()
+                .stream()
+                .map(UserMapper::toBrief)
+                .toList();
     }
 
-    public Optional<User> getUserById(Long id) {
-        return userRepository.findById(id);
+    /** Opsiyonel: GET /api/users/{id} -> UserBriefDto */
+    public UserBriefDto getUserBriefById(Long id) {
+        User u = userRepository.findById(id)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("User not found"));
+        return UserMapper.toBrief(u);
     }
 
-    public User createUser(User user) {
-        return userRepository.save(user);
+    /** POST /api/users -> geri dönüş de DTO */
+    public UserBriefDto createUser(User user) {
+        User saved = userRepository.save(user);
+        return UserMapper.toBrief(saved);
     }
 
     public void deleteUser(Long id) {

@@ -1,5 +1,6 @@
 package com.taskfoo.taskfoo_backend.controller;
 
+import com.taskfoo.taskfoo_backend.dto.response.common.PriorityBriefDto;
 import com.taskfoo.taskfoo_backend.model.Priority;
 import com.taskfoo.taskfoo_backend.service.PriorityService;
 import org.springframework.web.bind.annotation.*;
@@ -17,17 +18,17 @@ public class PriorityController {
     }
 
     @GetMapping
-    public List<Priority> getAllPriorities() {
-        return priorityService.getAllPriorities();
+    public List<PriorityBriefDto> getAll() {
+        return priorityService.getAll();
     }
 
     @PostMapping
-    public Priority createPriority(@RequestBody Priority priority) {
-        return priorityService.createPriority(priority);
+    public PriorityBriefDto create(@RequestBody Priority priority) {
+        return priorityService.create(priority);
     }
 
     @DeleteMapping("/{id}")
-    public void deletePriority(@PathVariable Long id) {
-        priorityService.deletePriority(id);
+    public void delete(@PathVariable Long id) {
+        priorityService.delete(id);
     }
 }

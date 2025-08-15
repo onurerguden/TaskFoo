@@ -1,5 +1,6 @@
 package com.taskfoo.taskfoo_backend.controller;
 
+import com.taskfoo.taskfoo_backend.dto.response.common.IdNameDto;
 import com.taskfoo.taskfoo_backend.model.Status;
 import com.taskfoo.taskfoo_backend.service.StatusService;
 import org.springframework.web.bind.annotation.*;
@@ -17,17 +18,17 @@ public class StatusController {
     }
 
     @GetMapping
-    public List<Status> getAllStatuses() {
-        return statusService.getAllStatuses();
+    public List<IdNameDto> getAll() {
+        return statusService.getAll();
     }
 
     @PostMapping
-    public Status createStatus(@RequestBody Status status) {
-        return statusService.createStatus(status);
+    public IdNameDto create(@RequestBody Status status) {
+        return statusService.create(status);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteStatus(@PathVariable Long id) {
-        statusService.deleteStatus(id);
+    public void delete(@PathVariable Long id) {
+        statusService.delete(id);
     }
 }

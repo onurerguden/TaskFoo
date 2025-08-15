@@ -1,5 +1,6 @@
 package com.taskfoo.taskfoo_backend.controller;
 
+import com.taskfoo.taskfoo_backend.dto.response.common.UserBriefDto;
 import com.taskfoo.taskfoo_backend.model.User;
 import com.taskfoo.taskfoo_backend.service.UserService;
 import org.springframework.web.bind.annotation.*;
@@ -17,12 +18,18 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public List<UserBriefDto> getAllUsers() {
+        return userService.getAllUsersBrief();
+    }
+
+    // İstersen açık tut:
+    @GetMapping("/{id}")
+    public UserBriefDto getById(@PathVariable Long id) {
+        return userService.getUserBriefById(id);
     }
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
+    public UserBriefDto createUser(@RequestBody User user) {
         return userService.createUser(user);
     }
 
