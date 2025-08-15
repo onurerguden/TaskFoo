@@ -132,13 +132,6 @@ function formatDueDate(dueDate?: string): { text: string; color: string; urgent:
   return { text: due.toLocaleDateString(), color: "#64748b", urgent: false };
 }
 
-function splitFullName(fullName?: string): { name: string; surname?: string } {
-  if (!fullName) return { name: "", surname: "" };
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 1) return { name: parts[0], surname: "" };
-  const surname = parts.pop();
-  return { name: parts.join(" "), surname };
-}
 
 // Enhanced Status Theme with solid colors and Archive
 const STATUS_THEME: Record<string, {
@@ -916,10 +909,13 @@ const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery
           level: getPriorityLevel(task.priority.name) 
         }
       : { id: 0, name: "Low", color: "#64748b", level: 1 },
-    assignedUsers: (task.assignees ?? []).map((a: UserBrief) => {
-      const { name, surname } = splitFullName(a.fullName);
-      return { id: a.id, name, surname } as unknown as User;
-    }),
+    assignedUsers: (task.assignees ?? []).map((a: UserBrief) => (
+      {
+        id: a.id,
+        name: (a as any).name ?? "",
+        surname: (a as any).surname ?? ""
+      } as unknown as User
+    )),
     attachments: (task as any).attachments ?? 0,
     tags: (task as any).tags ?? [],
     subtasks: (task as any).subtasks,

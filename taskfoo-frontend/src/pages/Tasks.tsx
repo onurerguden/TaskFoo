@@ -115,21 +115,30 @@ export default function Tasks() {
           (r.assignees?.length ?? 0) > 0 ? (
             <Space size={8} wrap>
               {r.assignees!.map((u: UserBrief) => {
-                // fullName'i baş harfe çevir
-                const initials =
-                  u.fullName
-                    ?.split(/\s+/)
-                    .map((p) => p[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase() || "";
+                const name = ((u as any).name ?? "").toString().trim();
+                const surname = ((u as any).surname ?? "").toString().trim();
+                const full = ((u as any).fullName ?? (u as any).fullname ?? "").toString().trim();
+                const displayName = [name, surname].filter(Boolean).join(" ") || full || `User ${u.id}`;
+                const initials = displayName
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .map((p: string) => p[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase();
 
                 return (
                   <Space key={u.id} size={4}>
-                    <Avatar size="small" icon={<UserOutlined />} style={{ background: "#3b82f6" }}>
-                      {initials}
+                    <Avatar
+                      size="small"
+                      style={{
+                        background: `hsl(${(u.id as number) * 137.508}deg, 65%, 45%)`,
+                        fontSize: 11,
+                      }}
+                    >
+                      {initials || <UserOutlined />}
                     </Avatar>
-                    <Text>{u.fullName}</Text>
+                    <Text>{displayName}</Text>
                   </Space>
                 );
               })}

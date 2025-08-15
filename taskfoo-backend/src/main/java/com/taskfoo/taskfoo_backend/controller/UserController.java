@@ -1,3 +1,4 @@
+// src/main/java/com/taskfoo/taskfoo_backend/controller/UserController.java
 package com.taskfoo.taskfoo_backend.controller;
 
 import com.taskfoo.taskfoo_backend.dto.response.common.UserBriefDto;
@@ -10,22 +11,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
-
     private final UserService userService;
-
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
+    public UserController(UserService userService) { this.userService = userService; }
 
     @GetMapping
     public List<UserBriefDto> getAllUsers() {
-        return userService.getAllUsersBrief();
-    }
-
-    // İstersen açık tut:
-    @GetMapping("/{id}")
-    public UserBriefDto getById(@PathVariable Long id) {
-        return userService.getUserBriefById(id);
+        return userService.getAllUsers();
     }
 
     @PostMapping

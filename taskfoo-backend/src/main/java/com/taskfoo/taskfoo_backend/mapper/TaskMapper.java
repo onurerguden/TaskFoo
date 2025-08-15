@@ -66,7 +66,16 @@ public class TaskMapper {
         List<User> users = t.getAssignedUsers();
         if (users == null || users.isEmpty()) return Collections.emptyList();
         return users.stream()
-                .map(u -> new UserBriefDto(u.getId(), fullNameOf(u), u.getRole()))
+                .map(u -> new UserBriefDto(
+                        u.getId(),
+                        safe(u.getName()),
+                        safe(u.getSurname()),
+                        u.getRole()
+                ))
                 .collect(Collectors.toList());
+    }
+
+    private static String safe(String s) {
+        return (s == null || s.isBlank()) ? "" : s.trim();
     }
 }

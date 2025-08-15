@@ -5,16 +5,33 @@ import { Table, Typography, Alert, Avatar, Space, Button, Popconfirm, App, Tag }
 import { UserOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
-import type { Task } from "../types";
+import { type TaskListItemResponse, type UserBrief } from "../api/tasks";
 import PageHeader from "../components/PageHeader";
 // ...
 
+
+const visibleName = (u: { name?: string; surname?: string; fullName?: string } | undefined) => {
+  if (!u) return "";
+  const n = (u.name || "").trim();
+  const s = (u.surname || "").trim();
+  if (n || s) return `${n}${s ? ` ${s}` : ""}`.trim();
+  return (u.fullName || "").trim();
+};
+
+const initialsFrom = (full: string) => {
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const colorForId = (id: number) => `hsl(${(id * 137.508) % 360}deg, 65%, 45%)`;
 
 const { Text } = Typography;
 
 type UserRow = {
   id: number;
-  name: string;
+  name?: string;
   surname?: string;
   role?: string;
 };
@@ -31,9 +48,9 @@ export default function Users() {
   });
 
   // tasks (assigned count için gerekir)
-  const { data: tasks = [] } = useQuery<Task[]>({
+  const { data: tasks = [] } = useQuery<TaskListItemResponse[]>({
     queryKey: ["tasks"],
-    queryFn: async () => (await api.get<Task[]>("/api/tasks")).data,
+    queryFn: async () => (await api.get<TaskListItemResponse[]>("/api/tasks")).data,
   });
 
   const del = useMutation({
@@ -53,24 +70,32 @@ export default function Users() {
     () => [
       {
         title: "User",
-        render: (_: any, r: UserRow) => (
-          <Space>
-            <Avatar icon={<UserOutlined />} style={{ background: "#3b82f6" }}>
-              {(r.name?.[0] || "") + (r.surname?.[0] || "")}
-            </Avatar>
-            <div>
-              <Text strong>{r.name}{r.surname ? ` ${r.surname}` : ""}</Text>
-              <div style={{ fontSize: 12, color: "#6b7280" }}>{r.role || "-"}</div>
-            </div>
-          </Space>
-        ),
+        render: (_: any, r: UserRow) => {
+          const displayName = visibleName(r);
+          const initials = initialsFrom(displayName || `User ${r.id}`);
+          return (
+            <Space>
+              <Avatar style={{ background: colorForId(r.id) }}>{initials}</Avatar>
+              <div>
+                <Text strong>{displayName || `User ${r.id}`}</Text>
+                <div style={{ fontSize: 12, color: "#6b7280" }}>{r.role || "-"}</div>
+              </div>
+            </Space>
+          );
+        },
       },
       {
         title: "Assigned Tasks",
         dataIndex: "assigned",
         width: 160,
         render: (_: any, r: UserRow) => {
-          const count = tasks.filter(t => (t as any).assignedUsers?.some((u: any) => u.id === r.id)).length;
+          const count = tasks.filter((t) => {
+            const assigneesA = (t as any).assignees as UserBrief[] | undefined;
+            const assigneesB = (t as any).assignedUsers as { id: number }[] | undefined;
+            if (assigneesA && Array.isArray(assigneesA)) return assigneesA.some((u) => u.id === r.id);
+            if (assigneesB && Array.isArray(assigneesB)) return assigneesB.some((u) => u.id === r.id);
+            return false;
+          }).length;
           return (
             <Tag color={count > 0 ? "blue" : "default"} style={{ borderRadius: 6 }}>
               {count}
