@@ -1,7 +1,12 @@
+// src/main/java/com/taskfoo/taskfoo_backend/controller/ProjectController.java
 package com.taskfoo.taskfoo_backend.controller;
 
-import com.taskfoo.taskfoo_backend.model.Project;
+import com.taskfoo.taskfoo_backend.dto.request.project.CreateProjectRequest;
+import com.taskfoo.taskfoo_backend.dto.request.project.UpdateProjectRequest;
+import com.taskfoo.taskfoo_backend.dto.response.Project.ProjectDto;
 import com.taskfoo.taskfoo_backend.service.ProjectService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,23 +22,29 @@ public class ProjectController {
     }
 
     @GetMapping
-    public List<Project> getAllProjects() {
-        return projectService.getAllProjects();
+    public List<ProjectDto> list() {
+        return projectService.list();
     }
 
     @GetMapping("/{id}")
-    public Project getById(@PathVariable Long id) {
-        return projectService.getProjectById(id)  // service içinde notFound atıyor olmalı
-                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Project not found"));
+    public ProjectDto get(@PathVariable Long id) {
+        return projectService.get(id);
     }
 
     @PostMapping
-    public Project createProject(@RequestBody Project project) {
-        return projectService.createProject(project);
+    @ResponseStatus(HttpStatus.CREATED)
+    public ProjectDto create(@Valid @RequestBody CreateProjectRequest req) {
+        return projectService.create(req);
+    }
+
+    @PutMapping("/{id}")
+    public ProjectDto update(@PathVariable Long id, @Valid @RequestBody UpdateProjectRequest req) {
+        return projectService.update(id, req);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteProject(@PathVariable Long id) {
-        projectService.deleteProject(id);
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        projectService.delete(id);
     }
 }
