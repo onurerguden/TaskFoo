@@ -55,6 +55,8 @@ function getStatusColor(status?: string) {
 }
 
 const LABEL_COL_WIDTH = 180; // Previously 300 — reduce to one third for task labels column
+const EPIC_HEADER_HEIGHT = 32; // height reserved for each epic header row in the chart
+const EPIC_BAR_HEIGHT = 16;    // visual height of the red epic span bar
 
 // Custom Gantt Chart Component
 interface GanttTaskData {
@@ -99,8 +101,8 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
     }
 
     const allDates = tasks.flatMap(t => [dayjs(t.startDate), dayjs(t.dueDate)]);
-    const minDate = allDates.reduce((min, current) => current.isBefore(min) ? current : min).subtract(1, 'week').startOf('day');
-    const maxDate = allDates.reduce((max, current) => current.isAfter(max) ? current : max).add(1, 'week').endOf('day');
+    const minDate = allDates.reduce((min, current) => current.isBefore(min) ? current : min).subtract(2, 'day').startOf('day');
+    const maxDate = allDates.reduce((max, current) => current.isAfter(max) ? current : max).add(2, 'day').endOf('day');
 
     return { start: minDate, end: maxDate };
   }, [tasks]);
@@ -111,26 +113,48 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
 
   // Group tasks by epic
   // Group tasks by epic + sort: (1) tasks inside epic by startDate asc, (2) epics by earliest startDate asc
+// Group tasks by epic + sort:
+// (1) tasks inside each epic by startDate asc, tie-break by (duration asc), sonra title asc
+// (2) epics by earliest task's (startDate asc, sonra duration asc), sonra epic adı asc
 const groupedTasks = useMemo(() => {
-  const groups: Record<string, GanttTaskData[]> = {};
-  tasks.forEach((t) => {
+  const byEpic: Record<string, GanttTaskData[]> = {};
+  for (const t of tasks) {
     const epicName = t.epicName || "No Epic";
-    if (!groups[epicName]) groups[epicName] = [];
-    groups[epicName].push(t);
-  });
+    (byEpic[epicName] ||= []).push(t);
+  }
 
-  // map -> sort inside -> find earliest -> sort epics -> back to [epicName, tasks[]]
-  const ordered = Object.entries(groups)
+  const cmpTask = (a: GanttTaskData, b: GanttTaskData) => {
+    const aStart = dayjs(a.startDate).valueOf();
+    const bStart = dayjs(b.startDate).valueOf();
+    if (aStart !== bStart) return aStart - bStart;
+
+    const aDur = dayjs(a.dueDate).valueOf() - dayjs(a.startDate).valueOf();
+    const bDur = dayjs(b.dueDate).valueOf() - dayjs(b.startDate).valueOf();
+    if (aDur !== bDur) return aDur - bDur;
+
+    // stable fallback (optional)
+    return (a.title || "").localeCompare(b.title || "");
+  };
+
+  const ordered = Object.entries(byEpic)
     .map(([epicName, list]) => {
-      const sortedTasks = [...list].sort((a, b) =>
-        dayjs(a.startDate).diff(dayjs(b.startDate))
-      );
-      const earliestMs = sortedTasks.length
+      const sortedTasks = [...list].sort(cmpTask);
+
+      // epic sıralaması için: en erken başlayan task; eşitse en kısa süre
+      const earliestStart = sortedTasks.length
         ? dayjs(sortedTasks[0].startDate).valueOf()
         : Number.POSITIVE_INFINITY;
-      return { epicName, sortedTasks, earliestMs };
+      const earliestDur = sortedTasks.length
+        ? dayjs(sortedTasks[0].dueDate).valueOf() - dayjs(sortedTasks[0].startDate).valueOf()
+        : Number.POSITIVE_INFINITY;
+
+      return { epicName, sortedTasks, earliestStart, earliestDur };
     })
-    .sort((a, b) => a.earliestMs - b.earliestMs)
+    .sort((a, b) => {
+      if (a.earliestStart !== b.earliestStart) return a.earliestStart - b.earliestStart;
+      if (a.earliestDur !== b.earliestDur) return a.earliestDur - b.earliestDur;
+      return a.epicName.localeCompare(b.epicName);
+    })
     .map(({ epicName, sortedTasks }) => [epicName, sortedTasks] as [string, GanttTaskData[]]);
 
   return ordered;
@@ -344,7 +368,7 @@ const groupedTasks = useMemo(() => {
 
   const rowHeight = 48;
   const headerHeight = 80;
-  const totalHeight = headerHeight + groupedTasks.reduce((acc, [_, tks]) => acc + tks.length * rowHeight + 32, 0);
+  const totalHeight = headerHeight + groupedTasks.reduce((acc, [_, tks]) => acc + EPIC_HEADER_HEIGHT + tks.length * rowHeight, 0);
 
   return (
     <div style={{
@@ -394,7 +418,7 @@ const groupedTasks = useMemo(() => {
             {/* Task rows */}
             {groupedTasks.map(([epicName, epicTasks]) => (
               <div key={epicName}>
-                {/* Epic header */}
+                {/* Epic header row */}
                 <div style={{
                   padding: '8px 16px',
                   background: '#f1f5f9',
@@ -407,7 +431,15 @@ const groupedTasks = useMemo(() => {
                 </div>
 
                 {/* Tasks in epic */}
-                {[...epicTasks].sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate))).map((task) => (
+                {[...epicTasks].sort((a, b) => {
+                  const aStart = dayjs(a.startDate).valueOf();
+                  const bStart = dayjs(b.startDate).valueOf();
+                  if (aStart !== bStart) return aStart - bStart;
+                  const aDur = dayjs(a.dueDate).valueOf() - dayjs(a.startDate).valueOf();
+                  const bDur = dayjs(b.dueDate).valueOf() - dayjs(b.startDate).valueOf();
+                  if (aDur !== bDur) return aDur - bDur;
+                  return (a.title || "").localeCompare(b.title || "");
+                }).map((task) => (
                   <div
                     key={task.id}
                     style={{
@@ -589,131 +621,191 @@ const groupedTasks = useMemo(() => {
               })()}
             </svg>
 
-            {/* Task bars */}
-            {groupedTasks.map(([, epicTasks], groupIndex) => {
-              let currentY = groupIndex > 0 ?
-                groupedTasks.slice(0, groupIndex).reduce((acc, [, tks]) => acc + tks.length * rowHeight + 32, 0) + 32 : 32;
+            {/* Task bars and epic span bars */}
+            {groupedTasks.map(([epicName, epicTasks], groupIndex) => {
+              const groupStartY = groupIndex > 0
+                ? groupedTasks.slice(0, groupIndex).reduce((acc, [, tks]) => acc + EPIC_HEADER_HEIGHT + tks.length * rowHeight, 0)
+                : 0; // top of epic header row
+              const currentY = groupStartY + EPIC_HEADER_HEIGHT; // top of first task row for this epic
 
-              const sortedEpicTasks = [...epicTasks].sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate)));
-              return sortedEpicTasks.map((task, taskIndex) => {
-                const taskY = currentY + taskIndex * rowHeight;
-                const startPos = getDatePosition(dayjs(task.startDate));
-                const endPos = getDatePosition(dayjs(task.dueDate));
-                const width = Math.max(20, endPos - startPos);
-
-                const isUpdating = updatingTasks.has(task.id);
-                const isDragging = dragState?.taskId === task.id;
-                const isSelected = selectedId === task.id;
-
-                return (
-                  <div
-                    key={task.id}
-                    data-task-id={task.id}
-                    style={{
-                      position: 'absolute',
-                      left: startPos,
-                      top: taskY + 8,
-                      width: width,
-                      height: 32,
-                      background: `linear-gradient(135deg, ${getStatusColor(task.status)}, ${getStatusColor(task.status)}dd)`,
-                      borderRadius: 6,
-                      cursor: isDragging ? 'grabbing' : 'grab',
-                      border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
-                      boxShadow: isDragging ? '0 4px 12px rgba(59, 130, 246, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 8px',
-                      transition: isDragging ? 'none' : 'all 0.2s ease',
-                      transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-                      zIndex: isDragging ? 100 : 1,
-                      opacity: isUpdating ? 0.7 : 1
-                    }}
-                    onMouseDown={(e) => beginDrag(e, task, 'move')}
-                    onClick={(e) => { e.stopPropagation(); setSelectedId(task.id); }}
-                  >
-                    {/* Resize handles (visible on hover/selection) */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: -4,
-                        top: 0,
-                        width: 8,
-                        height: '100%',
-                        cursor: 'col-resize',
-                        background: 'transparent'
-                      }}
-                      onMouseDown={(e) => beginDrag(e, task, 'resize-left')}
-                      className="resize-left"
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        right: -4,
-                        top: 0,
-                        width: 8,
-                        height: '100%',
-                        cursor: 'col-resize',
-                        background: 'transparent'
-                      }}
-                      onMouseDown={(e) => beginDrag(e, task, 'resize-right')}
-                      className="resize-right"
-                    />
-
-                    {/* Duration chip */}
-                    <div style={{
-                      position: 'absolute',
-                      top: -22,
-                      left: 8,
-                      padding: '2px 6px',
-                      fontSize: 10,
-                      background: 'rgba(0,0,0,0.55)',
-                      color: '#fff',
-                      borderRadius: 4,
-                      opacity: isDragging || isSelected ? 1 : 0,
-                      transition: 'opacity .2s ease'
-                    }}>
-                      {dayjs(task.startDate).format('DD MMM')} → {dayjs(task.dueDate).format('DD MMM')}
-                    </div>
-
-                    {/* Task content */}
-                    <div style={{
-                      color: '#fff',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
-                      textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                    }}>
-                      {task.title}
-                    </div>
-
-                    {/* Tooltip (follows old behaviour during drag) */}
-                    <div
-                      className="task-tooltip"
-                      style={{
-                        position: 'absolute',
-                        bottom: -28,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'rgba(0,0,0,0.8)',
-                        color: '#fff',
-                        padding: '4px 8px',
-                        borderRadius: 4,
-                        fontSize: 10,
-                        whiteSpace: 'nowrap',
-                        pointerEvents: 'none',
-                        opacity: isDragging ? 1 : 0,
-                        transition: 'opacity 0.2s ease',
-                        zIndex: 1000
-                      }}
-                    >
-                      {dayjs(task.startDate).format('DD MMM')} → {dayjs(task.dueDate).format('DD MMM')}
-                    </div>
-                  </div>
-                );
+              // Sort tasks inside the epic by start asc, then duration asc (already consistent with label column)
+              const sortedEpicTasks = [...epicTasks].sort((a, b) => {
+                const aStart = dayjs(a.startDate).valueOf();
+                const bStart = dayjs(b.startDate).valueOf();
+                if (aStart !== bStart) return aStart - bStart;
+                const aDur = dayjs(a.dueDate).valueOf() - dayjs(a.startDate).valueOf();
+                const bDur = dayjs(b.dueDate).valueOf() - dayjs(b.startDate).valueOf();
+                return aDur - bDur;
               });
+
+              // Compute epic span: earliest start to latest due among tasks in this epic
+              const epicStart = epicTasks.length
+                ? epicTasks.reduce((min, t) => (dayjs(t.startDate).isBefore(min) ? dayjs(t.startDate) : min), dayjs(epicTasks[0].startDate))
+                : null;
+              const epicEnd = epicTasks.length
+                ? epicTasks.reduce((max, t) => (dayjs(t.dueDate).isAfter(max) ? dayjs(t.dueDate) : max), dayjs(epicTasks[0].dueDate))
+                : null;
+
+              const epicStartPos = epicStart ? getDatePosition(epicStart) : 0;
+              const epicEndPos = epicEnd ? getDatePosition(epicEnd) : 0;
+              const epicWidth = Math.max(2, epicEndPos - epicStartPos);
+              const epicBarY = groupStartY + (EPIC_HEADER_HEIGHT - EPIC_BAR_HEIGHT) / 2; // center inside epic header row
+
+              return (
+                <React.Fragment key={`group-${groupIndex}`}>
+                  {epicStart && epicEnd && (
+                    <div
+                      key={`epic-span-${groupIndex}`}
+                      style={{
+                        position: 'absolute',
+                        left: epicStartPos,
+                        top: epicBarY,
+                        width: epicWidth,
+                        height: EPIC_BAR_HEIGHT,
+                        background: 'linear-gradient(135deg, #ef4444, #ef4444dd)',
+                        borderRadius: 6,
+                        border: '1px solid rgba(255,255,255,0.25)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        pointerEvents: 'none',
+                        zIndex: 2
+                      }}
+                      title={`${epicStart.format('DD MMM')} → ${epicEnd.format('DD MMM')}`}
+                    >
+                      <span style={{
+                        marginLeft: 8,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: '#fff',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.35)'
+                      }}>
+                        {epicName}
+                      </span>
+                    </div>
+                  )}
+
+                  {sortedEpicTasks.map((task, taskIndex) => {
+                    const taskY = currentY + taskIndex * rowHeight;
+                    const startPos = getDatePosition(dayjs(task.startDate));
+                    const endPos = getDatePosition(dayjs(task.dueDate));
+                    const width = Math.max(20, endPos - startPos);
+
+                    const isUpdating = updatingTasks.has(task.id);
+                    const isDragging = dragState?.taskId === task.id;
+                    const isSelected = selectedId === task.id;
+
+                    return (
+                      <div
+                        key={task.id}
+                        data-task-id={task.id}
+                        style={{
+                          position: 'absolute',
+                          left: startPos,
+                          top: taskY + 8,
+                          width: width,
+                          height: 32,
+                          background: `linear-gradient(135deg, ${getStatusColor(task.status)}, ${getStatusColor(task.status)}dd)`,
+                          borderRadius: 6,
+                          cursor: isDragging ? 'grabbing' : 'grab',
+                          border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
+                          boxShadow: isDragging ? '0 4px 12px rgba(59, 130, 246, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0 8px',
+                          transition: isDragging ? 'none' : 'all 0.2s ease',
+                          transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+                          zIndex: isDragging ? 100 : 1,
+                          opacity: isUpdating ? 0.7 : 1
+                        }}
+                        onMouseDown={(e) => beginDrag(e, task, 'move')}
+                        onClick={(e) => { e.stopPropagation(); setSelectedId(task.id); }}
+                      >
+                        {/* Resize handles (visible on hover/selection) */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: -4,
+                            top: 0,
+                            width: 8,
+                            height: '100%',
+                            cursor: 'col-resize',
+                            background: 'transparent'
+                          }}
+                          onMouseDown={(e) => beginDrag(e, task, 'resize-left')}
+                          className="resize-left"
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            right: -4,
+                            top: 0,
+                            width: 8,
+                            height: '100%',
+                            cursor: 'col-resize',
+                            background: 'transparent'
+                          }}
+                          onMouseDown={(e) => beginDrag(e, task, 'resize-right')}
+                          className="resize-right"
+                        />
+
+                        {/* Duration chip */}
+                        <div style={{
+                          position: 'absolute',
+                          top: -22,
+                          left: 8,
+                          padding: '2px 6px',
+                          fontSize: 10,
+                          background: 'rgba(0,0,0,0.55)',
+                          color: '#fff',
+                          borderRadius: 4,
+                          opacity: isDragging || isSelected ? 1 : 0,
+                          transition: 'opacity .2s ease'
+                        }}>
+                          {dayjs(task.startDate).format('DD MMM')} → {dayjs(task.dueDate).format('DD MMM')}
+                        </div>
+
+                        {/* Task content */}
+                        <div style={{
+                          color: '#fff',
+                          fontSize: 12,
+                          fontWeight: 500,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          flex: 1,
+                          textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                        }}>
+                          {task.title}
+                        </div>
+
+                        {/* Tooltip (follows old behaviour during drag) */}
+                        <div
+                          className="task-tooltip"
+                          style={{
+                            position: 'absolute',
+                            bottom: -28,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: 'rgba(0,0,0,0.8)',
+                            color: '#fff',
+                            padding: '4px 8px',
+                            borderRadius: 4,
+                            fontSize: 10,
+                            whiteSpace: 'nowrap',
+                            pointerEvents: 'none',
+                            opacity: isDragging ? 1 : 0,
+                            transition: 'opacity 0.2s ease',
+                            zIndex: 1000
+                          }}
+                        >
+                          {dayjs(task.startDate).format('DD MMM')} → {dayjs(task.dueDate).format('DD MMM')}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              );
             })}
           </div>
         </div>

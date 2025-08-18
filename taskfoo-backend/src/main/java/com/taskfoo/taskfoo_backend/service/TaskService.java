@@ -131,7 +131,7 @@ public class TaskService {
     public Task updateTaskDates(Long id, LocalDate startDate, LocalDate dueDate) {
         Task t = taskRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Task not found: " + id));
-        
+
         t.setStartDate(startDate);
         t.setDueDate(dueDate);
         // JPA @Version alanı otomatik artacak
