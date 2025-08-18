@@ -13,13 +13,29 @@ import ReactApexChart from "react-apexcharts";
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
-type ProjectRow = { id: number; name: string };
-
-function initialsFrom(fullName?: string) {
-  const s = (fullName || "").trim();
-  if (!s) return "?";
-  const p = s.split(/\s+/);
-  return (p[0][0] + (p[p.length - 1]?.[0] ?? p[0][1] ?? "")).toUpperCase();
+// supports both legacy {fullName} and new {name, surname}
+function getDisplayName(u: UserBrief | any) {
+  const full = (u as any)?.fullName;
+  if (typeof full === "string" && full.trim()) return full.trim();
+  const name = (u as any)?.name ?? "";
+  const surname = (u as any)?.surname ?? "";
+  const joined = `${(name || "").trim()}${surname ? " " + String(surname).trim() : ""}`.trim();
+  return joined || "-";
+}
+function initialsFromBrief(u: UserBrief | any) {
+  const full = (u as any)?.fullName;
+  let name = "", surname = "";
+  if (typeof full === "string" && full.trim()) {
+    const p = full.trim().split(/\s+/);
+    name = p[0] || "";
+    surname = p.length > 1 ? p[p.length - 1] : "";
+  } else {
+    name = (u as any)?.name ?? "";
+    surname = (u as any)?.surname ?? "";
+  }
+  const i1 = name ? String(name)[0] : "";
+  const i2 = surname ? String(surname)[0] : "";
+  return (i1 + i2 || String(name).slice(0, 2) || "?").toUpperCase();
 }
 function colorFromId(id: number) {
   return `hsl(${(id * 137.508) % 360}deg, 65%, 45%)`;
@@ -73,7 +89,13 @@ export default function TasksGantt() {
 
   // status -> renk
   const statusColor = (s?: string) =>
-    s === "Done" ? "#10B981" : s === "Review" ? "#F59E0B" : s === "In Progress" ? "#FB923C" : "#3092B9";
+    s === "Done"
+      ? "#10B981"
+      : s === "In Progress"
+      ? "#FB923C"
+      : s === "Archive"
+      ? "#94A3B8"
+      : "#3092B9"; // default: To Do
 
   // ApexCharts serisi (epic bazlı gruplama)
   const series = useMemo(() => {
@@ -169,8 +191,8 @@ export default function TasksGantt() {
               <Space size={6} style={{ marginLeft: 8 }}>
                 <Tag color="#3092B9">To Do</Tag>
                 <Tag color="#FB923C">In Progress</Tag>
-                <Tag color="#F59E0B">Review</Tag>
                 <Tag color="#10B981">Done</Tag>
+                <Tag color="#94A3B8">Archive</Tag>
               </Space>
             </div>
           </Space>
@@ -183,9 +205,9 @@ export default function TasksGantt() {
               ) : (
                 <Avatar.Group maxCount={8} size="small" maxStyle={{ color: "#64748b", backgroundColor: "#f1f5f9" }}>
                   {assignees.map((u) => (
-                    <Tooltip key={u.id} title={u.fullName}>
+                    <Tooltip key={u.id} title={getDisplayName(u)}>
                       <Avatar style={{ background: colorFromId(u.id), border: "1px solid #fff", fontSize: 11 }}>
-                        {initialsFrom(u.fullName)}
+                        {initialsFromBrief(u)}
                       </Avatar>
                     </Tooltip>
                   ))}
