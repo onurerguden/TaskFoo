@@ -16,6 +16,7 @@ import headerLogo from "./assets/header-logo.png";
 
 import { useEffect, useState } from "react";
 import { connectWebSocket, disconnectWebSocket, initTaskWs } from "./ws/client"; // 👈
+import TasksGantt from "./pages/TasksGantt";
 
 const { Header, Content } = Layout;
 
@@ -73,7 +74,8 @@ export default function App() {
             <Route path="/users/new" element={<NewUser />} />
             <Route path="/users" element={<Users />} />
             <Route path="/epics" element={<Epics />} />
-            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects" element={<Projects />} />        
+            <Route path="/gantt" element={<TasksGantt />} />
           </Routes>
         </Content>
       </Layout>

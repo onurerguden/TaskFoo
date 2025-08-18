@@ -11,6 +11,7 @@ import {
   FlagOutlined,
   TeamOutlined,
   UnorderedListOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 
 import logo from "../assets/taskfoo-logo.png"; // Logo yolu
@@ -19,7 +20,7 @@ const { Sider } = Layout;
 
 const items: MenuProps["items"] = [
   { key: "/board", label: "Board", icon: <AppstoreOutlined /> },
-
+  { key: "/gantt", label: "Gantt Chart", icon: <BarChartOutlined /> },
   { key: "/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
   
   // Tasks
