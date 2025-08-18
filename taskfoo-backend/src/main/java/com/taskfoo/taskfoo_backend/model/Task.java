@@ -40,6 +40,7 @@ public class Task {
     @ManyToOne @JoinColumn(name = "epic_id")
     private Epic epic;
 
+    
     @ManyToMany
     @JoinTable(
             name = "task_user",
