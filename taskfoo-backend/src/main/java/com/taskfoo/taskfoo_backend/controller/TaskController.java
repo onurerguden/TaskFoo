@@ -1,10 +1,7 @@
 // src/main/java/com/taskfoo/taskfoo_backend/controller/TaskController.java
 package com.taskfoo.taskfoo_backend.controller;
 
-import com.taskfoo.taskfoo_backend.dto.request.task.AssignUsersRequest;
-import com.taskfoo.taskfoo_backend.dto.request.task.CreateTaskRequest;
-import com.taskfoo.taskfoo_backend.dto.request.task.UpdateTaskRequest;
-import com.taskfoo.taskfoo_backend.dto.request.task.UpdateTaskStatusRequest;
+import com.taskfoo.taskfoo_backend.dto.request.task.*;
 import com.taskfoo.taskfoo_backend.dto.response.task.TaskListItemResponse;
 import com.taskfoo.taskfoo_backend.mapper.TaskMapper;
 import com.taskfoo.taskfoo_backend.model.*;
@@ -70,6 +67,14 @@ public class TaskController {
         mapper.applyCreate(t, req, status, priority, epic, assignees);
         Task saved = taskService.createTask(t);
         return mapper.toListItem(saved);
+    }
+
+    @PatchMapping("/{id}/dates")
+    public TaskListItemResponse updateDates(@PathVariable Long id,
+                                            @RequestBody @Valid UpdateTaskDatesRequest body) {
+
+        Task updated = taskService.updateTaskDates(id, body.startDate(), body.dueDate(), body.version());
+        return mapper.toListItem(updated); 
     }
 
     // UPDATE (partial update dto)

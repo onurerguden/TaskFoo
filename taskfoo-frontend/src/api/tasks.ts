@@ -46,6 +46,16 @@ export async function listTasks(): Promise<TaskListItemResponse[]> {
   return res.data;
 }
 
+export type UpdateTaskDatesRequest = {
+  startDate: string; // "YYYY-MM-DD"
+  dueDate: string;   // "YYYY-MM-DD"
+  version: number;
+};
+
+export async function updateTaskDates(id: number, body: UpdateTaskDatesRequest) {
+  const res = await api.patch(`/api/tasks/${id}/dates`, body);
+  return res.data as TaskListItemResponse;
+}
 export async function updateTaskStatus(
   id: number,
   statusId: number,

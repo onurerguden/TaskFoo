@@ -6,12 +6,15 @@ import com.taskfoo.taskfoo_backend.repository.TaskActivityRepository;
 import com.taskfoo.taskfoo_backend.repository.TaskRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TaskService {
@@ -121,6 +124,25 @@ public class TaskService {
         Task saved = taskRepository.saveAndFlush(task);
         broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_UPDATED", saved));
         return saved;
+    }
+
+
+    @Transactional
+    public Task updateTaskDates(Long id, LocalDate startDate, LocalDate dueDate, Long version) {
+        Task t = taskRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Task not found: " + id));
+
+        if (!Objects.equals(t.getVersion(), version)) {
+            throw new OptimisticLockingFailureException("Version conflict for task " + id);
+        }
+        if (dueDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("dueDate cannot be before startDate");
+        }
+
+        t.setStartDate(startDate);
+        t.setDueDate(dueDate);
+        // JPA @Version alanı otomatik artacak
+        return taskRepository.save(t);
     }
 
 
