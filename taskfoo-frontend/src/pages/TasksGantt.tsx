@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, Space, Select, DatePicker, Tag, Typography, Avatar, Tooltip, Empty } from "antd";
 import PageHeader from "../components/PageHeader";
 import api from "../api/client";
-import type { Epic } from "../types";
+import type { Epic, Project } from "../types";
 import type { TaskListItemResponse, UserBrief } from "../api/tasks";
 import { listEpics } from "../api/epics";
 import dayjs, { Dayjs } from "dayjs";
@@ -46,9 +46,9 @@ export default function TasksGantt() {
     queryKey: ["tasks"],
     queryFn: async () => (await api.get<TaskListItemResponse[]>("/api/tasks")).data,
   });
-  const { data: projects = [] } = useQuery<ProjectRow[]>({
+  const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["projects"],
-    queryFn: async () => (await api.get<ProjectRow[]>("/api/projects")).data,
+    queryFn: async () => (await api.get<Project[]>("/api/projects")).data,
   });
   const { data: epics = [] } = useQuery<Epic[]>({ queryKey: ["epics"], queryFn: listEpics });
 
