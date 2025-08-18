@@ -54,6 +54,8 @@ function getStatusColor(status?: string) {
   return statusColors[status as keyof typeof statusColors] || statusColors["To Do"];
 }
 
+const LABEL_COL_WIDTH = 180; // Previously 300 — reduce to one third for task labels column
+
 // Custom Gantt Chart Component
 interface GanttTaskData {
   id: number;
@@ -108,15 +110,31 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
   const chartWidth = Math.max(800, totalDays * dayWidth);
 
   // Group tasks by epic
-  const groupedTasks = useMemo(() => {
-    const groups: Record<string, GanttTaskData[]> = {};
-    tasks.forEach(task => {
-      const epicName = task.epicName || 'No Epic';
-      if (!groups[epicName]) groups[epicName] = [];
-      groups[epicName].push(task);
-    });
-    return Object.entries(groups);
-  }, [tasks]);
+  // Group tasks by epic + sort: (1) tasks inside epic by startDate asc, (2) epics by earliest startDate asc
+const groupedTasks = useMemo(() => {
+  const groups: Record<string, GanttTaskData[]> = {};
+  tasks.forEach((t) => {
+    const epicName = t.epicName || "No Epic";
+    if (!groups[epicName]) groups[epicName] = [];
+    groups[epicName].push(t);
+  });
+
+  // map -> sort inside -> find earliest -> sort epics -> back to [epicName, tasks[]]
+  const ordered = Object.entries(groups)
+    .map(([epicName, list]) => {
+      const sortedTasks = [...list].sort((a, b) =>
+        dayjs(a.startDate).diff(dayjs(b.startDate))
+      );
+      const earliestMs = sortedTasks.length
+        ? dayjs(sortedTasks[0].startDate).valueOf()
+        : Number.POSITIVE_INFINITY;
+      return { epicName, sortedTasks, earliestMs };
+    })
+    .sort((a, b) => a.earliestMs - b.earliestMs)
+    .map(({ epicName, sortedTasks }) => [epicName, sortedTasks] as [string, GanttTaskData[]]);
+
+  return ordered;
+}, [tasks]);
 
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
@@ -339,13 +357,13 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
       <div style={{
         overflowX: 'auto',
         overflowY: 'auto',
-        maxHeight: '70vh',
+        maxHeight: '80vh',
         position: 'relative'
       }}>
         <div
           ref={ganttRef}
           style={{
-            width: Math.max(chartWidth + 300, 1200),
+            width: chartWidth + LABEL_COL_WIDTH,
             height: totalHeight,
             position: 'relative'
           }}
@@ -355,7 +373,7 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
             position: 'sticky',
             left: 0,
             top: 0,
-            width: 300,
+            width: LABEL_COL_WIDTH,
             height: '100%',
             background: '#fafbfc',
             borderRight: '2px solid #e5e7eb',
@@ -389,7 +407,7 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
                 </div>
 
                 {/* Tasks in epic */}
-                {epicTasks.map((task) => (
+                {[...epicTasks].sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate))).map((task) => (
                   <div
                     key={task.id}
                     style={{
@@ -422,7 +440,7 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
                           {task.status}
                         </Tag>
                         {task.assignees.length > 0 && (
-                          <Avatar.Group size="small" max={{ count: 2 }}>
+                          <Avatar.Group size="small">
                             {task.assignees.map(user => (
                               <Tooltip key={user.id} title={getDisplayName(user)}>
                                 <Avatar
@@ -456,7 +474,7 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
           <div style={{
             position: 'absolute',
             top: 0,
-            left: 300,
+            left: LABEL_COL_WIDTH,
             width: chartWidth,
             height: headerHeight,
             background: '#f8fafc',
@@ -514,7 +532,7 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
           <div style={{
             position: 'absolute',
             top: headerHeight,
-            left: 300,
+            left: LABEL_COL_WIDTH,
             width: chartWidth,
             height: totalHeight - headerHeight
           }}>
@@ -576,7 +594,8 @@ function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
               let currentY = groupIndex > 0 ?
                 groupedTasks.slice(0, groupIndex).reduce((acc, [, tks]) => acc + tks.length * rowHeight + 32, 0) + 32 : 32;
 
-              return epicTasks.map((task, taskIndex) => {
+              const sortedEpicTasks = [...epicTasks].sort((a, b) => dayjs(a.startDate).diff(dayjs(b.startDate)));
+              return sortedEpicTasks.map((task, taskIndex) => {
                 const taskY = currentY + taskIndex * rowHeight;
                 const startPos = getDatePosition(dayjs(task.startDate));
                 const endPos = getDatePosition(dayjs(task.dueDate));
@@ -815,7 +834,9 @@ export default function TasksGantt() {
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <PageHeader title="Tasks Gantt" actionText="Back to Tasks" to="/tasks" />
       
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 12 }}>
+      <div
+        style={{ width: "100%", margin: 0, padding: 24 }}
+      >
         {/* Filters */}
         <Card size="small" style={{ marginBottom: 12 }}>
           <Space wrap>
