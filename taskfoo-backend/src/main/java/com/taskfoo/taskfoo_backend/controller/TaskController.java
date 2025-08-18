@@ -73,8 +73,8 @@ public class TaskController {
     public TaskListItemResponse updateDates(@PathVariable Long id,
                                             @RequestBody @Valid UpdateTaskDatesRequest body) {
 
-        Task updated = taskService.updateTaskDates(id, body.startDate(), body.dueDate(), body.version());
-        return mapper.toListItem(updated); 
+        Task updated = taskService.updateTaskDates(id, body.startDate(), body.dueDate());
+        return mapper.toListItem(updated);
     }
 
     // UPDATE (partial update dto)

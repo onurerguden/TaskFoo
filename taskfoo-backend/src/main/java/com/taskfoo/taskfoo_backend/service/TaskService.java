@@ -128,17 +128,10 @@ public class TaskService {
 
 
     @Transactional
-    public Task updateTaskDates(Long id, LocalDate startDate, LocalDate dueDate, Long version) {
+    public Task updateTaskDates(Long id, LocalDate startDate, LocalDate dueDate) {
         Task t = taskRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Task not found: " + id));
-
-        if (!Objects.equals(t.getVersion(), version)) {
-            throw new OptimisticLockingFailureException("Version conflict for task " + id);
-        }
-        if (dueDate.isBefore(startDate)) {
-            throw new IllegalArgumentException("dueDate cannot be before startDate");
-        }
-
+        
         t.setStartDate(startDate);
         t.setDueDate(dueDate);
         // JPA @Version alanı otomatik artacak
