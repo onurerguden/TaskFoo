@@ -8,7 +8,7 @@ import api from "../api/client";
 import PageHeader from "../components/PageHeader";
 import { listEpics } from "../api/epics";
 import { listUsers } from "../api/users";
-import type { Epic, Project, User } from "../types";
+import type { Epic, User } from "../types";
 import type { TaskListItemResponse, UserBrief } from "../api/tasks";
 
 const { Text } = Typography;
