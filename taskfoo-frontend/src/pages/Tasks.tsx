@@ -1,7 +1,7 @@
 /* src/pages/Tasks.tsx */
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Table, Typography, Alert, Tag, Avatar, Space, Button, Popconfirm, App } from "antd";
+import { Table, Typography, Alert, Tag, Avatar, Space, Button, Popconfirm, App, Card } from "antd";
 import { DeleteOutlined, UserOutlined } from "@ant-design/icons";
 import PageHeader from "../components/PageHeader";
 import { useNavigate } from "react-router-dom";
@@ -77,8 +77,8 @@ export default function Tasks() {
   // Columns — DTO alanları: status{name}, priority{name,color}, epic{name}, assignees[{id,fullName}]
   const columns = useMemo(
     () => [
-      { title: "ID", dataIndex: "id", width: 70 },
-      { title: "Title", dataIndex: "title", ellipsis: true },
+      { title: "ID", dataIndex: "id", width: 70, align: "center" },
+      { title: "Title", dataIndex: "title", ellipsis: true, width: 300 },
       {
         title: "Status",
         render: (_: any, r: TaskListItemResponse) => (
@@ -87,6 +87,7 @@ export default function Tasks() {
           </Tag>
         ),
         width: 120,
+        align: "center",
       },
       {
         title: "Priority",
@@ -104,12 +105,14 @@ export default function Tasks() {
             <Text>{r.priority?.name ?? "-"}</Text>
           </Space>
         ),
-        width: 130,
+        width: 140,
+        align: "center",
       },
       {
         title: "Epic",
         render: (_: any, r: TaskListItemResponse) => r.epic?.name ?? "-",
         width: 180,
+        ellipsis: true,
       },
       {
         title: "Assignees",
@@ -148,12 +151,12 @@ export default function Tasks() {
           ) : (
             "-"
           ),
-        width: 260,
+        width: 280,
       },
-      { title: "Start Date", render: (_: any, r: TaskListItemResponse) => fmtDate(r.startDate), width: 110 },
-      { title: "Start Time", render: (_: any, r: TaskListItemResponse) => fmtTime(r.startDate), width: 100 },
-      { title: "Due Date", render: (_: any, r: TaskListItemResponse) => fmtDate(r.dueDate), width: 110 },
-      { title: "Due Time", render: (_: any, r: TaskListItemResponse) => fmtTime(r.dueDate), width: 100 },
+      { title: "Start Date", render: (_: any, r: TaskListItemResponse) => fmtDate(r.startDate), width: 110, align: "center" },
+      { title: "Start Time", render: (_: any, r: TaskListItemResponse) => fmtTime(r.startDate), width: 90, align: "center" },
+      { title: "Due Date", render: (_: any, r: TaskListItemResponse) => fmtDate(r.dueDate), width: 110, align: "center" },
+      { title: "Due Time", render: (_: any, r: TaskListItemResponse) => fmtTime(r.dueDate), width: 90, align: "center" },
       {
         title: "",
         key: "actions",
@@ -175,25 +178,41 @@ export default function Tasks() {
           </Space>
         ),
         width: 180,
+        align: "right",
       },
     ],
     [del]
   );
 
-  return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
-      <PageHeader title="Tasks" actionText="New Task" to="/tasks/new" />
+ return (
+  <div
+    style={{
+      minHeight: "100vh",
+      background: "#f8f9fa",
+    }}
+  >
+    <PageHeader title="Tasks" actionText="New Task" to="/tasks/new" />
 
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 12 }}>
+    <div style={{ padding: 12 }}>
+      <Card
+        size="small"
+        style={{ borderRadius: 10 }}
+        bodyStyle={{ padding: 0 }}
+        title={<Text strong>Tasks</Text>}
+      >
         <Table<TaskListItemResponse>
-          size="middle"
+          size="small"
+          sticky
           loading={isLoading}
           rowKey="id"
           dataSource={data}
-          pagination={{ pageSize: 10, showSizeChanger: false }}
+          pagination={{ pageSize: 12, showSizeChanger: false }}
           columns={columns as any}
+          tableLayout="fixed"
+          scroll={{ x: 1100 }}
         />
-      </div>
+      </Card>
     </div>
-  );
+  </div>
+);
 }
