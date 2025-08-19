@@ -1,15 +1,14 @@
 /* src/pages/Users.tsx */
-import { useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Table, Typography, Alert, Avatar, Space, Button, Popconfirm, App, Tag, Modal, Form, Input } from "antd";
-import type { InputRef } from "antd";
-import { DeleteOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { Table, Typography, Alert, Avatar, Space, Button, Popconfirm, App, Tag } from "antd";
+import { UserOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { type TaskListItemResponse, type UserBrief } from "../api/tasks";
 import PageHeader from "../components/PageHeader";
-import { useCreateFlow } from "../hooks/useCreateFlow";
-import { createUser } from "../api/users";
+// ...
+
 
 const visibleName = (u: { name?: string; surname?: string; fullName?: string } | undefined) => {
   if (!u) return "";
@@ -48,7 +47,7 @@ export default function Users() {
     queryFn: async () => (await api.get<UserRow[]>("/api/users")).data,
   });
 
-  // tasks (for assigned count)
+  // tasks (assigned count için gerekir)
   const { data: tasks = [] } = useQuery<TaskListItemResponse[]>({
     queryKey: ["tasks"],
     queryFn: async () => (await api.get<TaskListItemResponse[]>("/api/tasks")).data,
@@ -61,27 +60,6 @@ export default function Users() {
       message.success("User deleted");
     },
     onError: (e: any) => message.error(e?.response?.data?.message ?? "Delete failed"),
-  });
-
-  // ---------------- Create User (inline, via useCreateFlow) ----------------
-  const [createOpen, setCreateOpen] = useState(false);
-  const [form] = Form.useForm<{ name: string; surname?: string; role?: string }>();
-  const firstInputRef = useRef<InputRef | null>(null);
-
-  const flow = useCreateFlow<
-    { name: string; surname?: string; role?: string },
-    { id: number; name: string; surname?: string; role?: string }
-  >({
-    queryKey: ["users"],
-    createFn: createUser,
-    listRoute: "/users",
-    countdown: 8,
-    successTitle: "User created successfully",
-    buildFields: (data, input) => [
-      { label: "Name", value: data?.name ?? input.name },
-      { label: "Surname", value: data?.surname ?? input.surname },
-      { label: "Role", value: data?.role ?? input.role },
-    ],
   });
 
   if (isError) {
@@ -151,88 +129,22 @@ export default function Users() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
-      {/* Header */}
-      <PageHeader title="Users" actionText="New User" to={undefined as any} />
+    
+  <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    {/* Header */}
+    
+<PageHeader title="Users" actionText="New User" to="/users/new" />
 
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 12 }}>
-        {/* Local create trigger (keeps header clean and avoids navigation) */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-            setCreateOpen(true);
-            setTimeout(() => firstInputRef.current?.focus?.(), 0);
-          }}>
-            New User
-          </Button>
-        </div>
-
-        <Table<UserRow>
-          size="middle"
-          loading={isLoading}
-          rowKey="id"
-          dataSource={users}
-          pagination={{ pageSize: 10, showSizeChanger: false }}
-          columns={columns as any}
-        />
-      </div>
-
-      {/* Create User Modal */}
-      <Modal
-        open={createOpen}
-        title="Create New User"
-        onCancel={() => setCreateOpen(false)}
-        footer={null}
-        destroyOnHidden
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={flow.handleFinish}
-          disabled={flow.loading}
-        >
-          <Form.Item
-            name="name"
-            label={<Text strong style={{ fontSize: 16 }}>Name</Text>}
-            rules={[{ required: true, message: "Name is required" }]}
-          >
-            <Input
-              ref={(el) => { firstInputRef.current = el; }}
-              placeholder="e.g. Jane"
-              size="large"
-              style={{ borderRadius: 6 }}
-            />
-          </Form.Item>
-
-          <Form.Item name="surname" label={<Text strong style={{ fontSize: 16 }}>Surname</Text>}>
-            <Input placeholder="e.g. Doe" size="large" style={{ borderRadius: 6 }} />
-          </Form.Item>
-
-          <Form.Item name="role" label={<Text strong style={{ fontSize: 16 }}>Role</Text>}>
-            <Input placeholder="e.g. Software Engineer" size="large" style={{ borderRadius: 6 }} />
-          </Form.Item>
-
-          {/* SaveBar from the hook (inline helper) */}
-          <flow.SaveBar onCancel={() => setCreateOpen(false)} />
-        </Form>
-      </Modal>
-
-      {/* Result Modal from the hook */}
-      <flow.ResultModal
-        onContinue={() => {
-          // close result, keep creating another
-          flow.continueCreate(
-            () => {
-              form.resetFields();
-              setCreateOpen(true);
-            },
-            () => setTimeout(() => firstInputRef.current?.focus?.(), 0)
-          );
-        }}
-        onGoList={() => {
-          setCreateOpen(false);
-          flow.goList();
-        }}
+    <div style={{ maxWidth: 1400, margin: "0 auto", padding: 12 }}>
+      <Table<UserRow>
+        size="middle"
+        loading={isLoading}
+        rowKey="id"
+        dataSource={users}
+        pagination={{ pageSize: 10, showSizeChanger: false }}
+        columns={columns as any}
       />
     </div>
-  );
+  </div>
+);
 }
