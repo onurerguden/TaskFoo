@@ -127,7 +127,7 @@ export default function NewUser() {
                 title={
                   <Space>
                     <UserOutlined style={{ color: "#1e40af" }} />
-                    <Text strong style={{ color: "#1f2937" }}>User Information</Text>
+                    <Text strong style={{ color: "#1f2937", fontSize: 18 }}>User Information</Text>
                   </Space>
                 }
                 style={{ marginBottom: 24, borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
@@ -136,15 +136,15 @@ export default function NewUser() {
                   body: { padding: 24 },
                 }}
               >
-                <Form.Item name="name" label={<Text strong style={{ color: "#374151" }}>Name</Text>} rules={[{ required: true, message: "Name is required" }]}>
+                <Form.Item name="name" label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Name</Text>} rules={[{ required: true, message: "Name is required" }]}>
                   <Input placeholder="e.g. Onur" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
                 </Form.Item>
 
-                <Form.Item name="surname" label={<Text strong style={{ color: "#374151" }}>Surname</Text>}>
+                <Form.Item name="surname" label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Surname</Text>}>
                   <Input placeholder="e.g. Ergüden" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
                 </Form.Item>
 
-                <Form.Item name="role" label={<Text strong style={{ color: "#374151" }}>Role</Text>}>
+                <Form.Item name="role" label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Role</Text>}>
                   <Input placeholder="e.g. Software Engineer" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
                 </Form.Item>
               </Card>
@@ -153,7 +153,7 @@ export default function NewUser() {
 
           <Card style={{ marginTop: 24, borderRadius: 8, border: "1px solid #e5e7eb", background: "#f8f9fa", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }} styles={{ body: { padding: 16 } }}>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-              <Button disabled={loading} size="large" onClick={() => nav("/users", { replace: true })} icon={<CloseOutlined />} style={{ minWidth: 120, borderColor: "#d1d5db", color: "#374151", borderRadius: 6 }}>
+              <Button disabled={loading} size="large" onClick={() => nav("/users", { replace: true })} icon={<CloseOutlined />} style={{ minWidth: 140, borderColor: "#d1d5db", color: "#374151", borderRadius: 6 }}>
                 Cancel
               </Button>
               <Button
@@ -165,7 +165,7 @@ export default function NewUser() {
                 aria-busy={loading}
                 aria-live="polite"
                 style={{
-                  minWidth: 140,
+                  minWidth: 160,
                   background: done
                     ? "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)"
                     : "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
@@ -187,29 +187,30 @@ export default function NewUser() {
         closable={false}
         maskClosable={false}
         onCancel={handleContinueCreate}
-        title={<Space><CheckCircleTwoTone twoToneColor="#52c41a" /><Text strong>User created successfully</Text></Space>}
+        title={<Space><CheckCircleTwoTone twoToneColor="#52c41a" /><Text strong style={{ fontSize: 18 }}>User created successfully</Text></Space>}
         footer={[
           <Button key="continue" onClick={handleContinueCreate}>
-            Continue creating user
+            Continue Creating User
           </Button>,
           <Button key="users" type="primary" onClick={handleGoUsers}>
             Go to Users ({countdown}s)
           </Button>,
         ]}
+        styles={{ body: { fontSize: 16, lineHeight: 1.8 } }}
       >
-        <Text type="secondary">Aşağıdaki kullanıcı başarıyla eklendi:</Text>
+        <Text type="secondary">The following user has been added successfully:</Text>
         <Divider style={{ margin: "12px 0" }} />
         <div style={{ lineHeight: 1.9 }}>
-          <div><Text strong>Name:</Text> {createdUser?.name ?? form.getFieldValue("name")}</div>
+          <div><Text strong>Name:</Text> <Text style={{ fontSize: 16 }}>{createdUser?.name ?? form.getFieldValue("name")}</Text></div>
           { (createdUser?.surname || form.getFieldValue("surname")) && (
-            <div><Text strong>Surname:</Text> {createdUser?.surname ?? form.getFieldValue("surname")}</div>
+            <div><Text strong>Surname:</Text> <Text style={{ fontSize: 16 }}>{createdUser?.surname ?? form.getFieldValue("surname")}</Text></div>
           )}
           { (createdUser?.role || form.getFieldValue("role")) && (
-            <div><Text strong>Role:</Text> {createdUser?.role ?? form.getFieldValue("role")}</div>
+            <div><Text strong>Role:</Text> <Text style={{ fontSize: 16 }}>{createdUser?.role ?? form.getFieldValue("role")}</Text></div>
           )}
         </div>
         <Divider style={{ margin: "12px 0" }} />
-        <Text type="secondary">No action? Automatically redirecting to Users in <Text strong>{countdown}</Text> seconds…</Text>
+        <Text type="secondary">No action? Redirecting to Users in <Text strong>{countdown}</Text> seconds…</Text>
       </Modal>
     </div>
   );
