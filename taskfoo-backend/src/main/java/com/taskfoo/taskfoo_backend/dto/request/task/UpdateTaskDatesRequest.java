@@ -7,5 +7,5 @@ import java.time.LocalDate;
 public record UpdateTaskDatesRequest(
         @NotNull LocalDate startDate,
         @NotNull LocalDate dueDate
-      //  @NotNull Long version   // optimistic locking
+    // without optimistic locking
 ) {}
