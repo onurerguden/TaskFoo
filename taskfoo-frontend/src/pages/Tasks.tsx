@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, Typography, Alert, Tag, Avatar, Space, Button, Popconfirm, App } from "antd";
 import { DeleteOutlined, UserOutlined } from "@ant-design/icons";
 import PageHeader from "../components/PageHeader";
+import { useNavigate } from "react-router-dom";
 
 // DTO tabanlı API importları
 import { listTasks, type TaskListItemResponse, type UserBrief } from "../api/tasks";
@@ -39,6 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function Tasks() {
   const qc = useQueryClient();
   const { message } = App.useApp();
+  const nav = useNavigate();
 
   // DTO: TaskListItemResponse[]
   const { data = [], isLoading, isError, error } = useQuery<TaskListItemResponse[]>({
@@ -157,19 +159,22 @@ export default function Tasks() {
         key: "actions",
         fixed: false,
         render: (_: any, r: TaskListItemResponse) => (
-          <Popconfirm
-            title="Are you sure you want to delete this task?"
-            okText="Delete"
-            okButtonProps={{ danger: true }}
-            cancelText="Cancel"
-            onConfirm={() => del.mutate(r.id as number)}
-          >
-            <Button danger icon={<DeleteOutlined />} size="small">
-              Delete
-            </Button>
-          </Popconfirm>
+          <Space>
+            <Button size="small" onClick={() => nav(`/tasks/${r.id}/edit`)}>Edit</Button>
+            <Popconfirm
+              title="Are you sure you want to delete this task?"
+              okText="Delete"
+              okButtonProps={{ danger: true }}
+              cancelText="Cancel"
+              onConfirm={() => del.mutate(r.id as number)}
+            >
+              <Button danger icon={<DeleteOutlined />} size="small">
+                Delete
+              </Button>
+            </Popconfirm>
+          </Space>
         ),
-        width: 100,
+        width: 180,
       },
     ],
     [del]

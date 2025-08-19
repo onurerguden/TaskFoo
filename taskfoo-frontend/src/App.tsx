@@ -13,6 +13,7 @@ import Users from "./pages/Users";
 import Epics from "./pages/Epics";
 import Projects from "./pages/Projects";
 import headerLogo from "./assets/header-logo.png";
+import TaskEdit from "./pages/TaskEdit";
 
 import { useEffect, useState } from "react";
 import { connectWebSocket, disconnectWebSocket, initTaskWs } from "./ws/client"; // 👈
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/epics" element={<Epics />} />
             <Route path="/projects" element={<Projects />} />        
             <Route path="/gantt" element={<TasksGantt />} />
+            <Route path="/tasks/:id/edit" element={<TaskEdit />} />
           </Routes>
         </Content>
       </Layout>

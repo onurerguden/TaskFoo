@@ -84,3 +84,32 @@ export async function assignUsers(
   );
   return res.data;
 }
+
+// --- ADD: fetch a single task by id ---
+export async function getTask(id: number): Promise<TaskListItemResponse> {
+  const res = await api.get<TaskListItemResponse>(`/api/tasks/${id}`);
+  return res.data;
+}
+
+// Body for full PUT (based on your Swagger screenshot)
+export type PutTaskBody = {
+  id: number;
+  version: number;
+  title: string;
+  description?: string;
+  startDate?: string;   // YYYY-MM-DD
+  dueDate?: string;     // YYYY-MM-DD
+  statusId?: number;    // you can omit if you patch status separately
+  priorityId?: number;
+  epicId?: number;
+  assigneeIds?: number[]; // you can omit if you use /assign-users
+};
+
+// --- ADD: full update (core details) ---
+export async function updateTask(
+  id: number,
+  body: PutTaskBody
+): Promise<TaskListItemResponse> {
+  const res = await api.put<TaskListItemResponse>(`/api/tasks/${id}`, body);
+  return res.data;
+}
