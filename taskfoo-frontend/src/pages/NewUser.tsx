@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Form, Input, Button, Card, Typography, Row, Col, Space, message as antdMessage } from "antd";
+import { Form, Input, Button, Card, Typography, Row, Col, Space, Modal, Divider, message as antdMessage } from "antd";
 import { useNavigate } from "react-router-dom";
 import { createUser } from "../api/users";
-import { SaveOutlined, CloseOutlined, UserOutlined, CheckOutlined } from "@ant-design/icons";
+import { SaveOutlined, CloseOutlined, UserOutlined, CheckOutlined, CheckCircleTwoTone } from "@ant-design/icons";
 import PageHeaderIcon from "../components/PageHeaderIcon";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const { Text } = Typography;
 
@@ -23,23 +23,29 @@ export default function NewUser() {
   const hasNavigatedRef = useRef(false);
   const submittedRef = useRef(false);
 
+  const [resultOpen, setResultOpen] = useState(false);
+  const [countdown, setCountdown] = useState(8);
+  const [createdUser, setCreatedUser] = useState<{ id?: number; name: string; surname?: string; role?: string } | null>(null);
+
   const mut = useMutation({
-    mutationFn: (v: FormValues) => createUser({ name: v.name, surname: v.surname, role: v.role }),
+    mutationFn: async (v: FormValues) => {
+      const res = await createUser({ name: v.name, surname: v.surname, role: v.role });
+      return res; // assume API returns created user object
+    },
     retry: false,
     onMutate: async () => {
       message.open({ type: "loading", content: "Creating user...", key: "createUser", duration: 0 });
     },
-    onSuccess: async () => {
+    onSuccess: async (data: any) => {
       await qc.invalidateQueries({ queryKey: ["users"] });
       if (hasNavigatedRef.current) return;
       hasNavigatedRef.current = true;
 
-      message.open({ type: "success", content: "User created successfully", key: "createUser", duration: 1.2 });
+      message.open({ type: "success", content: "User created", key: "createUser", duration: 0.6 });
       setDone(true);
-      setTimeout(() => {
-        setDone(false);
-        nav("/users", { replace: true });
-      }, 800);
+      setCreatedUser(data ?? null);
+      setCountdown(8);
+      setResultOpen(true);
     },
     onError: (e: any) => {
       message.open({
@@ -49,6 +55,9 @@ export default function NewUser() {
         duration: 2.5,
       });
       submittedRef.current = false; // allow retry after error
+    },
+    onSettled: () => {
+      // mutation finished; button spinner handled by isPending
     },
   });
 
@@ -67,6 +76,43 @@ export default function NewUser() {
       // onError will reset submittedRef
     }
   };
+
+  const handleContinueCreate = () => {
+    setResultOpen(false);
+    setDone(false);
+    setCreatedUser(null);
+    setTimeout(() => setCountdown(8), 0);
+    hasNavigatedRef.current = false;
+    submittedRef.current = false;
+    form.resetFields();
+    // Focus first field for faster entry
+    setTimeout(() => {
+      const first = document.querySelector<HTMLInputElement>('input[name="name"]');
+      first?.focus();
+    }, 0);
+  };
+
+  const handleGoUsers = () => {
+    setResultOpen(false);
+    nav("/users", { replace: true });
+  };
+
+  // Auto-redirect countdown when modal is open
+  useEffect(() => {
+    if (!resultOpen) return;
+    setCountdown(8);
+    const id = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(id);
+          handleGoUsers();
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [resultOpen]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
@@ -135,6 +181,36 @@ export default function NewUser() {
           </Card>
         </Form>
       </div>
+
+      <Modal
+        open={resultOpen}
+        closable={false}
+        maskClosable={false}
+        onCancel={handleContinueCreate}
+        title={<Space><CheckCircleTwoTone twoToneColor="#52c41a" /><Text strong>User created successfully</Text></Space>}
+        footer={[
+          <Button key="continue" onClick={handleContinueCreate}>
+            Continue creating user
+          </Button>,
+          <Button key="users" type="primary" onClick={handleGoUsers}>
+            Go to Users ({countdown}s)
+          </Button>,
+        ]}
+      >
+        <Text type="secondary">Aşağıdaki kullanıcı başarıyla eklendi:</Text>
+        <Divider style={{ margin: "12px 0" }} />
+        <div style={{ lineHeight: 1.9 }}>
+          <div><Text strong>Name:</Text> {createdUser?.name ?? form.getFieldValue("name")}</div>
+          { (createdUser?.surname || form.getFieldValue("surname")) && (
+            <div><Text strong>Surname:</Text> {createdUser?.surname ?? form.getFieldValue("surname")}</div>
+          )}
+          { (createdUser?.role || form.getFieldValue("role")) && (
+            <div><Text strong>Role:</Text> {createdUser?.role ?? form.getFieldValue("role")}</div>
+          )}
+        </div>
+        <Divider style={{ margin: "12px 0" }} />
+        <Text type="secondary">No action? Automatically redirecting to Users in <Text strong>{countdown}</Text> seconds…</Text>
+      </Modal>
     </div>
   );
 }
