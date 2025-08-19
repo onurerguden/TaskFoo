@@ -226,7 +226,6 @@ function DraggableTask({
   suppressWarnings: boolean;
   justDone?: boolean;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `task-${task.id}`,
     data: { taskId: task.id },
@@ -271,10 +270,8 @@ const dropdownItems: MenuProps['items'] = [
       ? `translate3d(${transform.x}px, ${transform.y}px, 0) ${isDragging ? 'rotate(5deg) scale(1.05)' : ''}`
       : undefined,
     transition: isDragging ? 'none' : 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: isDragging 
-      ? "0 20px 40px rgba(0,0,0,0.3)" 
-      : isHovered
-      ? "0 8px 24px rgba(0,0,0,0.12)"
+    boxShadow: isDragging
+      ? "0 20px 40px rgba(0,0,0,0.3)"
       : "0 1px 3px rgba(0,0,0,0.08)",
     borderLeft: `4px solid ${priorityColor}`,
     borderRadius: 12,
@@ -288,8 +285,6 @@ const dropdownItems: MenuProps['items'] = [
       ref={setNodeRef}
       size="small"
       style={style}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onClick={handleClick}
       {...listeners}
       {...attributes}
@@ -305,21 +300,19 @@ const dropdownItems: MenuProps['items'] = [
           >
             {task.title}
           </Text>
-          {isHovered && (
-            <Dropdown 
-              menu={{ items: dropdownItems }} 
-              trigger={['click']} 
-              placement="bottomRight"
-            >
-              <Button 
-                type="text" 
-                size="small" 
-                icon={<MoreOutlined />}
-                style={{ opacity: 0.6 }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </Dropdown>
-          )}
+          <Dropdown 
+            menu={{ items: dropdownItems }} 
+            trigger={["click"]} 
+            placement="bottomRight"
+          >
+            <Button 
+              type="text" 
+              size="small" 
+              icon={<MoreOutlined />}
+              style={{ opacity: 0.8 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </Dropdown>
         </div>
       }
       extra={
@@ -1393,7 +1386,7 @@ const handleDeleteConfirm = () => {
               </div>
 
               {/* Scrollable Content */}
-              <div style={{ overflow: "hidden", padding: 16, paddingRight: 8 }}>
+              <div style={{ overflow: "auto", padding: 16, paddingRight: 16 }}>
                 <TaskEdit
                   inlineMode
                   taskIdOverride={editingTask.id}
