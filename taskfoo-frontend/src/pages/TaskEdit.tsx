@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import PageHeaderIcon from "../components/PageHeaderIcon";
 import {
@@ -15,7 +15,9 @@ import {
   Avatar,
   Row,
   Col,
-  App,
+  Modal,
+  Divider,
+  message as antdMessage,
 } from "antd";
 import {
   CalendarOutlined,
@@ -23,6 +25,10 @@ import {
   FlagOutlined,
   ProjectOutlined,
   FileTextOutlined,
+  SaveOutlined,
+  CloseOutlined,
+  CheckOutlined,
+  CheckCircleTwoTone,
 } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 
@@ -48,8 +54,26 @@ export default function TaskEdit() {
   const taskId = Number(id);
   const nav = useNavigate();
   const qc = useQueryClient();
-  const { message } = App.useApp();
   const [form] = Form.useForm();
+  const message = antdMessage; // use global message API to ensure popups even without <App> provider
+  const [done, setDone] = useState(false);
+  const hasNavigatedRef = useRef(false);
+  const submittedRef = useRef(false);
+
+  const [resultOpen, setResultOpen] = useState(false);
+  const [countdown, setCountdown] = useState(8);
+  const [updatedTask, setUpdatedTask] = useState<{ 
+    id?: number; 
+    title: string; 
+    description?: string; 
+    statusName?: string;
+    priorityName?: string;
+    projectName?: string;
+    epicName?: string;
+    startDate?: string;
+    dueDate?: string;
+    assigneeNames?: string[];
+  } | null>(null);
 
   // Lookups
   const { data: statuses = [], isLoading: stL } = useQuery({ queryKey: ["statuses"], queryFn: listStatuses });
@@ -79,7 +103,7 @@ export default function TaskEdit() {
   // --- Mutations ---
   const mutDetails = useMutation({
     mutationFn: async (v: any) => {
-      return updateTask(taskId, {
+      const res = await updateTask(taskId, {
         id: task!.id,
         version: latestVersion(),
         title: v.title?.trim(),
@@ -87,12 +111,55 @@ export default function TaskEdit() {
         priorityId: v.priorityId,
         epicId: v.epicId,
       });
+      return res;
     },
-    onSuccess: (data) => {
+    retry: false,
+    onMutate: async () => {
+      message.open({ type: "loading", content: "Updating task...", key: "updateTask", duration: 0 });
+    },
+    onSuccess: async (data: any) => {
       qc.setQueryData(["task", taskId], data);
-      message.success("Task details saved");
+      await qc.invalidateQueries({ queryKey: ["tasks"] });
+      if (hasNavigatedRef.current) return;
+      hasNavigatedRef.current = true;
+
+      message.open({ type: "success", content: "Task updated", key: "updateTask", duration: 0.6 });
+      setDone(true);
+
+      // Get related names for display
+      const selectedStatus = statuses.find(s => s.id === form.getFieldValue("statusId"));
+      const selectedPriority = priorities.find((p: any) => p.id === form.getFieldValue("priorityId"));
+      const selectedProject = projects.find((p: any) => p.id === form.getFieldValue("projectId"));
+      const selectedEpic = epics.find((e: any) => e.id === form.getFieldValue("epicId"));
+      const selectedAssigneeIds = form.getFieldValue("assigneeIds") || [];
+      const assigneeNames = selectedAssigneeIds.map((id: number) => {
+        const user = users.find(u => u.id === id);
+        return user ? `${user.name}${user.surname ? ` ${user.surname}` : ''}` : 'Unknown User';
+      });
+
+      setUpdatedTask({
+        ...data,
+        statusName: selectedStatus?.name || "Unknown Status",
+        priorityName: selectedPriority?.name || "Unknown Priority",
+        projectName: selectedProject?.name,
+        epicName: selectedEpic?.name,
+        assigneeNames: assigneeNames.length > 0 ? assigneeNames : undefined,
+      });
+      setCountdown(8);
+      setResultOpen(true);
     },
-    onError: (e: any) => message.error(e?.response?.data?.message ?? "Failed to save details"),
+    onError: (e: any) => {
+      message.open({
+        type: "error",
+        content: e?.response?.data?.message ?? "Failed to update task",
+        key: "updateTask",
+        duration: 2.5,
+      });
+      submittedRef.current = false; // allow retry after error
+    },
+    onSettled: () => {
+      // mutation finished; button spinner handled by isPending
+    },
   });
 
   const mutStatus = useMutation({
@@ -150,6 +217,57 @@ export default function TaskEdit() {
 
   const loading = stL || prL || pjL || epL || usL || tkL || tkF;
 
+  const onFinishFailed = () => {
+    message.warning("Please fill the required fields");
+  };
+
+  const handleFinish = async (v: any) => {
+    if (mutDetails.isPending || submittedRef.current) return; // ignore rapid double-clicks
+    submittedRef.current = true;
+    try {
+      await form.validateFields();
+      await mutDetails.mutateAsync(v);
+    } catch {
+      // onError will reset submittedRef
+    }
+  };
+
+  const handleContinueEdit = () => {
+    setResultOpen(false);
+    setDone(false);
+    setUpdatedTask(null);
+    setTimeout(() => setCountdown(8), 0);
+    hasNavigatedRef.current = false;
+    submittedRef.current = false;
+    // Focus first field for faster entry
+    setTimeout(() => {
+      const first = document.querySelector<HTMLInputElement>('input[name="title"]');
+      first?.focus();
+    }, 0);
+  };
+
+  const handleGoTasks = () => {
+    setResultOpen(false);
+    nav("/tasks", { replace: true });
+  };
+
+  // Auto-redirect countdown when modal is open
+  useEffect(() => {
+    if (!resultOpen) return;
+    setCountdown(8);
+    const id = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(id);
+          handleGoTasks();
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [resultOpen]);
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -159,7 +277,7 @@ export default function TaskEdit() {
       <PageHeaderIcon title={`Edit Task #${taskId}`} />
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-        <Form form={form} layout="vertical" disabled={loading} validateTrigger={["onBlur", "onChange"]}>
+        <Form form={form} layout="vertical" onFinish={handleFinish} onFinishFailed={onFinishFailed} disabled={loading} validateTrigger={["onBlur", "onChange"]}>
           <Row gutter={[24, 24]}>
             {/* Left Column */}
             <Col xs={24} lg={16}>
@@ -418,29 +536,92 @@ export default function TaskEdit() {
               </Card>
 
               {/* Actions */}
-              <Card styles={{ body: { padding: 16 } }} style={{ marginTop: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                <Space>
-                  <Button onClick={() => nav(-1)}>Cancel</Button>
+              <Card 
+                styles={{ body: { padding: 16 } }} 
+                style={{ marginTop: 16, borderRadius: 8, border: "1px solid #e5e7eb", background: "#f8f9fa", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
+              >
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+                  <Button 
+                    disabled={mutDetails.isPending}
+                    size="large" 
+                    onClick={() => nav(-1)} 
+                    icon={<CloseOutlined />} 
+                    style={{ minWidth: 140, borderColor: "#d1d5db", color: "#374151", borderRadius: 6 }}
+                  >
+                    Cancel
+                  </Button>
                   <Button
                     type="primary"
-                    onClick={async () => {
-                      try {
-                        const v = await form.validateFields();
-                        mutDetails.mutate(v);
-                      } catch {
-                        /* validation error */
-                      }
-                    }}
+                    htmlType="submit"
                     loading={mutDetails.isPending}
+                    size="large"
+                    icon={done ? <CheckOutlined /> : <SaveOutlined />}
+                    aria-busy={mutDetails.isPending}
+                    aria-live="polite"
+                    style={{
+                      minWidth: 160,
+                      background: done
+                        ? "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)"
+                        : "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
+                      border: "none",
+                      borderRadius: 6,
+                      boxShadow: "0 2px 4px rgba(59, 130, 246, 0.3)",
+                      transition: "transform 80ms ease",
+                    }}
                   >
-                    Save
+                    {mutDetails.isPending ? "Updating..." : done ? "Updated!" : "Update Task"}
                   </Button>
-                </Space>
+                </div>
               </Card>
             </Col>
           </Row>
         </Form>
       </div>
+
+      <Modal
+        open={resultOpen}
+        closable={false}
+        maskClosable={false}
+        onCancel={handleContinueEdit}
+        title={<Space><CheckCircleTwoTone twoToneColor="#52c41a" /><Text strong style={{ fontSize: 18 }}>Task updated successfully</Text></Space>}
+        footer={[
+          <Button key="continue" onClick={handleContinueEdit}>
+            Continue Editing Task
+          </Button>,
+          <Button key="tasks" type="primary" onClick={handleGoTasks}>
+            Go to Tasks ({countdown}s)
+          </Button>,
+        ]}
+        styles={{ body: { fontSize: 16, lineHeight: 1.8 } }}
+      >
+        <Text type="secondary">The following task has been updated successfully:</Text>
+        <Divider style={{ margin: "12px 0" }} />
+        <div style={{ lineHeight: 1.9 }}>
+          <div><Text strong>Title:</Text> <Text style={{ fontSize: 16 }}>{updatedTask?.title ?? form.getFieldValue("title")}</Text></div>
+          { (updatedTask?.description || form.getFieldValue("description")) && (
+            <div><Text strong>Description:</Text> <Text style={{ fontSize: 16 }}>{updatedTask?.description ?? form.getFieldValue("description")}</Text></div>
+          )}
+          <div><Text strong>Status:</Text> <Text style={{ fontSize: 16 }}>{updatedTask?.statusName}</Text></div>
+          <div><Text strong>Priority:</Text> <Text style={{ fontSize: 16 }}>{updatedTask?.priorityName}</Text></div>
+          { updatedTask?.projectName && (
+            <div><Text strong>Project:</Text> <Text style={{ fontSize: 16 }}>{updatedTask.projectName}</Text></div>
+          )}
+          { updatedTask?.epicName && (
+            <div><Text strong>Epic:</Text> <Text style={{ fontSize: 16 }}>{updatedTask.epicName}</Text></div>
+          )}
+          { updatedTask?.startDate && (
+            <div><Text strong>Start Date:</Text> <Text style={{ fontSize: 16 }}>{updatedTask.startDate}</Text></div>
+          )}
+          { updatedTask?.dueDate && (
+            <div><Text strong>Due Date:</Text> <Text style={{ fontSize: 16 }}>{updatedTask.dueDate}</Text></div>
+          )}
+          { updatedTask?.assigneeNames && updatedTask.assigneeNames.length > 0 && (
+            <div><Text strong>Assignees:</Text> <Text style={{ fontSize: 16 }}>{updatedTask.assigneeNames.join(", ")}</Text></div>
+          )}
+        </div>
+        <Divider style={{ margin: "12px 0" }} />
+        <Text type="secondary">No action? Redirecting to Tasks in <Text strong>{countdown}</Text> seconds…</Text>
+      </Modal>
     </div>
   );
 }
