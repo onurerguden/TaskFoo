@@ -1,10 +1,12 @@
 /* src/pages/TasksGantt.tsx */
 import React, { useMemo, useState, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, Space, Select, DatePicker, Tag, Typography, Avatar, Tooltip, Empty, message, Dropdown, Button, Modal } from "antd";
+import { Card, Space, Select, DatePicker, Tag, Typography, Avatar, Tooltip, Empty, message, Dropdown, Button, Modal, Checkbox, Input } from "antd";
 import PageHeader from "../components/PageHeader";
 import api from "../api/client";
-import type { Epic, Project } from "../types";
+import type { Epic, Project, Status, Priority } from "../types";
+import { listStatuses } from "../api/statuses";
+import { listPriorities } from "../api/priorities";
 import { assignUsers } from "../api/tasks";
 import type { TaskListItemResponse, UserBrief } from "../api/tasks";
 import { listEpics } from "../api/epics";
@@ -494,7 +496,18 @@ const groupedTasks = useMemo(() => {
                           {task.status}
                         </Tag>
                         {task.assignees.length > 0 && (
-                          <Avatar.Group size="small">
+                          <Avatar.Group
+                            size="small"
+                            max={{
+                              count: 3,
+                              style: {
+                                color: '#64748b',
+                                backgroundColor: '#f1f5f9',
+                                fontSize: 10,
+                                border: '1px solid #fff',
+                              },
+                            }}
+                          >
                             {task.assignees.map(user => (
                               <Tooltip key={user.id} title={getDisplayName(user)}>
                                 <Avatar
@@ -873,6 +886,22 @@ export default function TasksGantt() {
   const [projectId, setProjectId] = useState<number | undefined>();
   const [epicId, setEpicId] = useState<number | undefined>();
   const [range, setRange] = useState<[Dayjs, Dayjs] | undefined>();
+  // Additional filters
+  const [statusIds, setStatusIds] = useState<number[]>([]);
+  const [priorityNames, setPriorityNames] = useState<string[]>([]);
+  const [assigneeIdsFilter, setAssigneeIdsFilter] = useState<number[]>([]);
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const { data: statuses = [] } = useQuery<Status[]>({
+    queryKey: ["statuses"],
+    queryFn: async () => (await api.get<Status[]>("/api/statuses")).data,
+  });
+
+  const { data: priorities = [] } = useQuery<Priority[]>({
+    queryKey: ["priorities"],
+    queryFn: async () => (await api.get<Priority[]>("/api/priorities")).data,
+  });
 
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
@@ -892,19 +921,53 @@ export default function TasksGantt() {
   // Filtered tasks
   const filtered = useMemo(() => {
     return (tasks as TaskListItemResponse[]).filter((t) => {
+      // Project filter via epic -> project
       if (projectId != null) {
         const pid = t.epic?.id != null ? epicToProjectId[t.epic.id] : undefined;
         if (pid !== projectId) return false;
       }
+      // Epic filter
       if (epicId != null && t.epic?.id !== epicId) return false;
+      // Date range filter
       if (range) {
         const s = dayjs(t.startDate);
         const d = dayjs(t.dueDate);
         if (d.isBefore(range[0], "day") || s.isAfter(range[1], "day")) return false;
       }
+      // Status filter (multi)
+      if (statusIds.length > 0) {
+        const sid = t.status?.id;
+        if (!sid || !statusIds.includes(Number(sid))) return false;
+      }
+      // Priority filter (by name)
+      if (priorityNames.length > 0) {
+        const name = t.priority?.name || "";
+        if (!priorityNames.includes(name)) return false;
+      }
+      // Assignee filter (any match)
+      if (assigneeIdsFilter.length > 0) {
+        const ids = (t.assignees || []).map(u => u.id);
+        if (!assigneeIdsFilter.some(id => ids.includes(id))) return false;
+      }
+      // Overdue only
+      if (showOverdueOnly) {
+        const due = t.dueDate ? dayjs(t.dueDate) : null;
+        if (!due || !due.isBefore(dayjs(), "day")) return false;
+      }
+      // Unassigned only
+      if (showUnassignedOnly) {
+        if ((t.assignees || []).length > 0) return false;
+      }
+      // Text search in title/description
+      if (searchText.trim()) {
+        const needle = searchText.trim().toLowerCase();
+        const hayTitle = (t.title || "").toLowerCase();
+        const hayDesc = (t as any).description ? String((t as any).description).toLowerCase() : "";
+        if (!hayTitle.includes(needle) && !hayDesc.includes(needle)) return false;
+      }
       return true;
     });
-  }, [tasks, projectId, epicId, range, epicToProjectId]);
+  }, [tasks, projectId, epicId, range, epicToProjectId, statusIds, priorityNames, assigneeIdsFilter, showOverdueOnly, showUnassignedOnly, searchText]);
 
   // Assignees summary
   const assignees = useMemo(() => {
@@ -1004,26 +1067,34 @@ export default function TasksGantt() {
         <Card size="small" style={{ marginBottom: 12 }}>
           <Space wrap>
             <div>
+              <Text strong>Search</Text>
+              <Input
+                allowClear
+                placeholder="Title or description"
+                style={{ width: 260, marginLeft: 8 }}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+            </div>
+
+            <div>
               <Text strong>Project</Text>
               <Select
                 allowClear
                 placeholder="All projects"
-                style={{ width: 240, marginLeft: 8 }}
+                style={{ width: 220, marginLeft: 8 }}
                 value={projectId}
-                onChange={(v) => {
-                  setProjectId(v);
-                  setEpicId(undefined);
-                }}
+                onChange={(v) => { setProjectId(v); setEpicId(undefined); }}
                 options={projects.map((p) => ({ value: p.id, label: p.name }))}
               />
             </div>
-            
+
             <div>
               <Text strong>Epic</Text>
               <Select
                 allowClear
                 placeholder="All epics"
-                style={{ width: 240, marginLeft: 8 }}
+                style={{ width: 220, marginLeft: 8 }}
                 value={epicId}
                 onChange={setEpicId}
                 options={(epics as Epic[])
@@ -1031,27 +1102,77 @@ export default function TasksGantt() {
                   .map((e) => ({ value: e.id, label: e.name }))}
               />
             </div>
-            
+
             <div>
               <Text strong>Date range</Text>
-              <RangePicker 
-                style={{ marginLeft: 8 }} 
-                value={range} 
-                onChange={(v) => setRange(v as any)} 
+              <RangePicker style={{ marginLeft: 8 }} value={range} onChange={(v) => setRange(v as any)} />
+            </div>
+
+            <div>
+              <Text strong>Status</Text>
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="All statuses"
+                style={{ width: 240, marginLeft: 8 }}
+                value={statusIds}
+                onChange={(vals) => setStatusIds((vals as number[]).map(Number))}
+                maxTagCount={2}
+                options={(statuses as Status[]).map(s => ({ value: s.id, label: s.name }))}
               />
             </div>
-            
+
             <div>
-              <Text strong>Legend</Text>
-              <Space size={6} style={{ marginLeft: 8 }}>
-                <Tag color="#3092B9">To Do</Tag>
-                <Tag color="#FB923C">In Progress</Tag>
-                <Tag color="#10B981">Done</Tag>
-                <Tag color="#94A3B8">Archive</Tag>
-              </Space>
+              <Text strong>Priority</Text>
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="All priorities"
+                style={{ width: 220, marginLeft: 8 }}
+                value={priorityNames}
+                onChange={(vals) => setPriorityNames(vals as string[])}
+                maxTagCount={2}
+                options={(priorities as Priority[]).map(p => ({ value: p.name, label: p.name }))}
+              />
+            </div>
+
+            <div>
+              <Text strong>Assignees</Text>
+              <Select
+                mode="multiple"
+                allowClear
+                placeholder="Any assignee"
+                style={{ width: 280, marginLeft: 8 }}
+                value={assigneeIdsFilter}
+                onChange={(vals) => setAssigneeIdsFilter((vals as number[]).map(Number))}
+                showSearch
+                maxTagCount={2}
+                filterOption={(input, option) => {
+                  const lbl = option?.label as any;
+                  const txt = typeof lbl === 'string' ? lbl : (lbl?.props?.children?.[1] ?? '');
+                  return String(txt).toLowerCase().includes(input.toLowerCase());
+                }}
+                options={users.map((u: any) => ({
+                  value: u.id,
+                  label: (
+                    <Space>
+                      <Avatar size="small" style={{ background: colorFromId(u.id), fontSize: 11 }}>{initialsFromBrief(u)}</Avatar>
+                      {getDisplayName(u)}
+                    </Space>
+                  )
+                }))}
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 8 }}>
+              <Checkbox checked={showOverdueOnly} onChange={(e) => setShowOverdueOnly(e.target.checked)}>Overdue only</Checkbox>
+              <Checkbox checked={showUnassignedOnly} onChange={(e) => setShowUnassignedOnly(e.target.checked)}>Unassigned only</Checkbox>
+              <Button onClick={() => { setSearchText(""); setProjectId(undefined); setEpicId(undefined); setRange(undefined); setStatusIds([]); setPriorityNames([]); setAssigneeIdsFilter([]); setShowOverdueOnly(false); setShowUnassignedOnly(false); }}>
+                Reset
+              </Button>
             </div>
           </Space>
-          
+
           <div style={{ marginTop: 12 }}>
             <Text type="secondary">Assignees in view:</Text>
             <Space size="small" style={{ marginLeft: 8 }}>
@@ -1061,11 +1182,7 @@ export default function TasksGantt() {
                 <Avatar.Group size="small" max={{ count: 8, style: { color: '#64748b', backgroundColor: '#f1f5f9' } }}>
                   {assignees.map((u) => (
                     <Tooltip key={u.id} title={getDisplayName(u)}>
-                      <Avatar style={{ 
-                        background: colorFromId(u.id), 
-                        border: "1px solid #fff", 
-                        fontSize: 11 
-                      }}>
+                      <Avatar style={{ background: colorFromId(u.id), border: '1px solid #fff', fontSize: 11 }}>
                         {initialsFromBrief(u)}
                       </Avatar>
                     </Tooltip>
