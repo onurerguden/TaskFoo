@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
+import dayjs from "dayjs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import "/src/Board.css";
 
@@ -38,7 +39,6 @@ import {
   Skeleton,
   Modal,
   Form,
-  DatePicker,
 } from "antd";
 import type { MenuProps } from 'antd';
 import { 
@@ -48,22 +48,29 @@ import {
   CalendarOutlined, 
   PaperClipOutlined,
   ClockCircleOutlined,
-  
+  UserOutlined,
   ExclamationCircleOutlined,
   WifiOutlined,
   ReloadOutlined,
   PlusOutlined,
-  
 } from "@ant-design/icons";
 
 import { listStatuses } from "../api/statuses";
-import { listTasks, updateTaskStatus, type TaskListItemResponse, type UserBrief } from "../api/tasks";
+import {
+  listTasks,
+  updateTaskStatus,
+  assignUsers,
+  type TaskListItemResponse,
+  type UserBrief,
+} from "../api/tasks";
+import api from "../api/client";
 import { listUsers } from "../api/users";
 import { listPriorities } from "../api/priorities";
 import { listProjects } from "../api/projects";
 import { listEpics } from "../api/epics";
 import type { Status, Priority, User, Project, Epic } from "../types";
 import PageHeaderJust from "../components/PageHeaderJust";
+import TaskEdit from "./TaskEdit";
 
 
 
@@ -202,16 +209,20 @@ const PRIORITY_ICONS = {
 };
 
 /** --- Enhanced Draggable Task Card --- */
-function DraggableTask({ 
-  task, 
-  onSelect, 
+function DraggableTask({
+  task,
+  onSelect,
+  onAssign,
   onEdit,
+  onDelete,
   suppressWarnings,
-  justDone
-}: { 
+  justDone,
+}: {
   task: TaskWithMetadata;
   onSelect: (id: number, multi: boolean) => void;
+  onAssign: (task: TaskWithMetadata) => void;
   onEdit: (task: TaskWithMetadata) => void;
+  onDelete: (task: TaskWithMetadata) => void;
   suppressWarnings: boolean;
   justDone?: boolean;
 }) {
@@ -231,14 +242,26 @@ function DraggableTask({
     onSelect(task.id, e.ctrlKey || e.metaKey);
   }, [task.id, onSelect]);
 
-  const dropdownItems: MenuProps['items'] = [
-    {
-      key: 'edit',
-      label: 'Edit Task',
-      icon: <EditOutlined />,
-      onClick: () => onEdit(task),
-    },
-  ];
+const dropdownItems: MenuProps['items'] = [
+  {
+    key: 'assign',
+    label: 'Assign Users',
+    icon: <UserOutlined />,
+    onClick: () => onAssign(task),
+  },
+  {
+    key: 'edit',
+    label: 'Edit Task',
+    icon: <EditOutlined />,
+    onClick: () => onEdit(task),
+  },
+  {
+    key: 'delete',
+    label: 'Delete Task',
+    danger: true,
+    onClick: () => onDelete(task),
+  },
+];
 
   const style: React.CSSProperties = {
     marginBottom: 12,
@@ -491,6 +514,8 @@ function Column({
   isLoading,
   onTaskSelect,
   onTaskEdit,
+  onTaskAssign,
+  onTaskDelete,
   suppressWarnings,
   recentlyDoneIds,
 }: { 
@@ -500,6 +525,8 @@ function Column({
   isLoading: boolean;
   onTaskSelect: (id: number, multi: boolean) => void;
   onTaskEdit: (task: TaskWithMetadata) => void;
+  onTaskAssign: (task: TaskWithMetadata) => void;
+  onTaskDelete: (task: TaskWithMetadata) => void;
   suppressWarnings: boolean;
   recentlyDoneIds: Set<number>;
 }) {
@@ -587,7 +614,9 @@ function Column({
               key={task.id}
               task={task}
               onSelect={onTaskSelect}
+              onAssign={onTaskAssign}
               onEdit={onTaskEdit}
+              onDelete={onTaskDelete}
               suppressWarnings={suppressWarnings}
               justDone={recentlyDoneIds.has(task.id)}
             />
@@ -793,7 +822,9 @@ export default function EnhancedBoard() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [editingTask, setEditingTask] = useState<TaskWithMetadata | null>(null);
   const [recentlyDoneIds, setRecentlyDoneIds] = useState<Set<number>>(new Set());
-
+const [assigningTask, setAssigningTask] = useState<TaskWithMetadata | null>(null);
+const [assignUserIds, setAssignUserIds] = useState<number[]>([]);
+const [deletingTask, setDeletingTask] = useState<TaskWithMetadata | null>(null);
 
   // Board component içinde:
 useEffect(() => {
@@ -1046,7 +1077,7 @@ const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery
   // Mutation for updating task status
   const updateStatusMutation = useMutation({
     mutationFn: ({ taskId, statusId, version }: { taskId: number; statusId: number; version: number }) =>
-  updateTaskStatus(taskId, statusId, version),
+      updateTaskStatus(taskId, statusId, version),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       msg.success("Task status updated successfully" , 0.7);
@@ -1056,6 +1087,78 @@ const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery
       msg.error("Failed to update task status");
     },
   });
+
+  const assignUsersMutation = useMutation({
+    mutationFn: async ({ taskId, userIds, version }: { taskId: number; userIds: number[]; version: number }) => {
+      return await assignUsers(taskId, userIds, version);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      message.success("Users assigned successfully", 0.8);
+      setAssigningTask(null);
+    },
+    onError: (err: any) => {
+      message.error(err?.response?.data?.message || "Failed to assign users");
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      await api.delete(`/api/tasks/${taskId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      message.success("Task deleted", 0.8);
+      setDeletingTask(null);
+    },
+    onError: (err: any) => {
+      message.error(err?.response?.data?.message || "Failed to delete task");
+    },
+  });
+
+  // --- Edit Modal Form Instance and Effect ---
+  const [editForm] = Form.useForm();
+
+  useEffect(() => {
+    if (editingTask) {
+      editForm.setFieldsValue({
+        title: editingTask.title,
+        description: editingTask.description,
+        dates: [
+          editingTask.startDate ? dayjs(editingTask.startDate) : undefined,
+          editingTask.dueDate ? dayjs(editingTask.dueDate) : undefined,
+        ],
+      });
+    } else {
+      editForm.resetFields();
+    }
+  }, [editingTask, editForm]);
+
+
+
+const handleOpenAssign = (task: TaskWithMetadata) => {
+  setAssigningTask(task);
+  const ids = (task.assignedUsers || []).map(u => u.id);
+  setAssignUserIds(ids);
+};
+
+const handleAssignConfirm = () => {
+  if (!assigningTask) return;
+  assignUsersMutation.mutate({
+    taskId: assigningTask.id,
+    userIds: assignUserIds,
+    version: assigningTask.version,
+  });
+};
+
+const handleOpenDelete = (task: TaskWithMetadata) => {
+  setDeletingTask(task);
+};
+
+const handleDeleteConfirm = () => {
+  if (!deletingTask) return;
+  deleteTaskMutation.mutate(deletingTask.id);
+};
 
   // Selection handler (no-op)
   const handleTaskSelect = useCallback((_taskId: number, _multi: boolean) => {
@@ -1200,6 +1303,8 @@ const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery
                     isLoading={isLoading}
                     onTaskSelect={handleTaskSelect}
                     onTaskEdit={handleTaskEdit}
+                    onTaskAssign={handleOpenAssign}
+                    onTaskDelete={handleOpenDelete}
                     suppressWarnings={status.name === 'Done' || status.name === 'Archive'}
                     recentlyDoneIds={recentlyDoneIds}
                   />
@@ -1213,44 +1318,92 @@ const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery
           </DndContext>
         </div>
 
+        {/* Assign Users Modal */}
+<Modal
+  title={`Assign Users${assigningTask ? ` — #${assigningTask.id}` : ""}`}
+  open={!!assigningTask}
+  onCancel={() => setAssigningTask(null)}
+  onOk={handleAssignConfirm}
+  okText={assignUsersMutation.isPending ? "Assigning..." : "Assign"}
+  okButtonProps={{ loading: assignUsersMutation.isPending, type: "primary" }}
+>
+  <Space direction="vertical" style={{ width: "100%" }}>
+    <Text type="secondary">Select users to assign to this task.</Text>
+    <Select
+      mode="multiple"
+      value={assignUserIds}
+      onChange={(vals) => setAssignUserIds(vals as number[])}
+      style={{ width: "100%" }}
+      placeholder="Choose users"
+      maxTagCount="responsive"
+      options={users.map((u: any) => ({
+        value: u.id,
+        label: (
+          <Space>
+            <Avatar size="small" style={{ background: `hsl(${u.id * 137.508}deg, 65%, 45%)` }}>
+              {((u.name?.[0] || "") + (u.surname?.[0] || "") || "?").toUpperCase()}
+            </Avatar>
+            {(u.name ?? "").trim()} {(u.surname ?? "").trim()}
+          </Space>
+        ),
+      }))}
+    />
+  </Space>
+</Modal>
+
+{/* Delete Task Modal */}
+<Modal
+  title="Delete Task"
+  open={!!deletingTask}
+  onCancel={() => setDeletingTask(null)}
+  onOk={handleDeleteConfirm}
+  okText={deleteTaskMutation.isPending ? "Deleting..." : "Delete"}
+  okButtonProps={{ danger: true, loading: deleteTaskMutation.isPending }}
+>
+  <Text>
+    Are you sure you want to delete task <Text strong>#{deletingTask?.id}</Text>? This action cannot be undone.
+  </Text>
+</Modal>
+
         {/* Task Edit Modal */}
         <Modal
-          title="Edit Task"
+          title={null}
           open={!!editingTask}
           onCancel={() => setEditingTask(null)}
           footer={null}
-          width={600}
+          width="min(1200px, 90vw)"
+          style={{ top: 24 }}
+          destroyOnClose
+          styles={{ body: { padding: 10 } }}
         >
           {editingTask && (
-            <Form
-              layout="vertical"
-              initialValues={{
-                title: editingTask.title,
-                description: editingTask.description,
-                dueDate: editingTask.dueDate ? new Date(editingTask.dueDate) : null,
-              }}
-            >
-              <Form.Item label="Title" name="title" rules={[{ required: true }]}>
-                <Input placeholder="Enter task title" />
-              </Form.Item>
-              
-              <Form.Item label="Description" name="description">
-                <Input.TextArea rows={3} placeholder="Enter task description" />
-              </Form.Item>
-              
-              <Form.Item label="Due Date" name="dueDate">
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>
-                <Button onClick={() => setEditingTask(null)}>
-                  Cancel
-                </Button>
-                <Button type="primary" htmlType="submit">
-                  Save Changes
-                </Button>
+            <div style={{ maxHeight: "calc(100vh - 200px)", display: "flex", flexDirection: "column" }}>
+              {/* App Bar Header */}
+              <div
+                style={{
+                  padding: "10px 16px",
+                  borderBottom: "1px solid #e5e7eb",
+                  background: "#ffffff",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 1,
+                }}
+              >
+                <Text strong style={{ fontSize: 16 }}>Edit Task — #{editingTask.id}</Text>
               </div>
-            </Form>
+
+              {/* Scrollable Content */}
+              <div style={{ overflow: "hidden", padding: 16, paddingRight: 8 }}>
+                <TaskEdit
+                  inlineMode
+                  taskIdOverride={editingTask.id}
+                  onClose={() => {
+                    setEditingTask(null);
+                    qc.invalidateQueries({ queryKey: ["tasks"] });
+                  }}
+                />
+              </div>
+            </div>
           )}
         </Modal>
       </div>

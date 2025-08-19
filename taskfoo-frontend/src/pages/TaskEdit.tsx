@@ -46,12 +46,19 @@ import { listProjects } from "../api/projects";
 import { listEpics } from "../api/epics";
 import { listUsers } from "../api/users";
 
+
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
-export default function TaskEdit() {
+interface TaskEditProps {
+  inlineMode?: boolean;            // when true, render suitable for embedding in a modal
+  taskIdOverride?: number;         // if provided, use this id instead of URL param
+  onClose?: () => void;            // called when user cancels or completes in inline mode
+}
+
+export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }: TaskEditProps) {
   const { id } = useParams<{ id: string }>();
-  const taskId = Number(id);
+  const taskId = taskIdOverride ?? Number(id);
   const nav = useNavigate();
   const qc = useQueryClient();
   const [form] = Form.useForm();
@@ -248,7 +255,11 @@ export default function TaskEdit() {
 
   const handleGoTasks = () => {
     setResultOpen(false);
-    nav("/tasks", { replace: true });
+    if (inlineMode) {
+      onClose?.();
+    } else {
+      nav("/tasks", { replace: true });
+    }
   };
 
   // Auto-redirect countdown when modal is open
@@ -269,14 +280,16 @@ export default function TaskEdit() {
   }, [resultOpen]);
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f8f9fa",
-      padding: 0,
-    }}>
-      <PageHeaderIcon title={`Edit Task #${taskId}`} />
+    <div
+      style={{
+        minHeight: inlineMode ? undefined : "100vh",
+        background: inlineMode ? undefined : "#f8f9fa",
+        padding: 0,
+      }}
+    >
+      { !inlineMode && <PageHeaderIcon title={`Edit Task #${taskId}`} /> }
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: inlineMode ? 0 : 24 }}>
         <Form form={form} layout="vertical" onFinish={handleFinish} onFinishFailed={onFinishFailed} disabled={loading} validateTrigger={["onBlur", "onChange"]}>
           <Row gutter={[24, 24]}>
             {/* Left Column */}
@@ -541,11 +554,17 @@ export default function TaskEdit() {
                 style={{ marginTop: 16, borderRadius: 8, border: "1px solid #e5e7eb", background: "#f8f9fa", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
               >
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-                  <Button 
+                  <Button
                     disabled={mutDetails.isPending}
-                    size="large" 
-                    onClick={() => nav(-1)} 
-                    icon={<CloseOutlined />} 
+                    size="large"
+                    onClick={() => {
+                      if (inlineMode) {
+                        onClose?.();
+                      } else {
+                        nav(-1);
+                      }
+                    }}
+                    icon={<CloseOutlined />}
                     style={{ minWidth: 140, borderColor: "#d1d5db", color: "#374151", borderRadius: 6 }}
                   >
                     Cancel
