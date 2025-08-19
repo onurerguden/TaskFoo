@@ -57,6 +57,7 @@ interface TaskEditProps {
 }
 
 export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }: TaskEditProps) {
+  const compact = inlineMode; // compact controls for modal usage
   const { id } = useParams<{ id: string }>();
   const taskId = taskIdOverride ?? Number(id);
   const nav = useNavigate();
@@ -289,7 +290,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
     >
       { !inlineMode && <PageHeaderIcon title={`Edit Task #${taskId}`} /> }
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: inlineMode ? 0 : 24 }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: inlineMode ? 0 : 24, fontSize: compact ? 13.5 : undefined }}>
         <Form form={form} layout="vertical" onFinish={handleFinish} onFinishFailed={onFinishFailed} disabled={loading} validateTrigger={["onBlur", "onChange"]}>
           <Row gutter={[24, 24]}>
             {/* Left Column */}
@@ -299,7 +300,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                 title={
                   <Space>
                     <FileTextOutlined style={{ color: "#1e40af" }} />
-                    <Text strong style={{ color: "#1f2937", fontSize: 18 }}>Basic Information</Text>
+                    <Text strong style={{ color: "#1f2937", fontSize: compact ? 16 : 18 }}>Basic Information</Text>
                   </Space>
                 }
                 style={{
@@ -308,7 +309,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                   border: "1px solid #e5e7eb",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                 }}
-                styles={{ header: { background: "#f8f9fa", borderBottom: "1px solid #e5e7eb" }, body: { padding: 24 } }}
+                styles={{ header: { background: "#f8f9fa", borderBottom: "1px solid #e5e7eb" }, body: { padding: compact ? 16 : 24 } }}
                 loading={loading}
               >
                 <Form.Item
@@ -326,7 +327,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                     placeholder="e.g. Implement User Authentication API"
                     maxLength={120}
                     showCount
-                    size="large"
+                    size={compact ? "middle" : "large"}
                     style={{ borderColor: "#d1d5db", borderRadius: 6 }}
                   />
                 </Form.Item>
@@ -337,7 +338,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                   rules={[{ max: 2000, message: "Description cannot exceed 2000 characters" }]}
                 >
                   <Input.TextArea
-                    rows={6}
+                    rows={compact ? 5 : 6}
                     placeholder="Write detailed description about the task..."
                     maxLength={2000}
                     showCount
@@ -351,11 +352,11 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                 title={
                   <Space>
                     <CalendarOutlined style={{ color: "#1e40af" }} />
-                    <Text strong style={{ color: "#1f2937", fontSize: 18 }}>Time and Assignment</Text>
+                    <Text strong style={{ color: "#1f2937", fontSize: compact ? 16 : 18 }}>Time and Assignment</Text>
                   </Space>
                 }
                 style={{ borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
-                styles={{ header: { background: "#f8f9fa", borderBottom: "1px solid #e5e7eb" }, body: { padding: 24 } }}
+                styles={{ header: { background: "#f8f9fa", borderBottom: "1px solid #e5e7eb" }, body: { padding: compact ? 16 : 24 } }}
               >
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
@@ -366,7 +367,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                     >
                       <RangePicker
                         style={{ width: "100%", borderColor: "#d1d5db", borderRadius: 6 }}
-                        size="large"
+                        size={compact ? "middle" : "large"}
                         placeholder={["Start Date", "Due Date"]}
                         format="DD/MM/YYYY"
                         onChange={(vals) => {
@@ -385,7 +386,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                         showSearch
                         placeholder="Select people"
                         loading={usL}
-                        size="large"
+                        size={compact ? "middle" : "large"}
                         maxTagCount="responsive"
                         filterOption={(input, option) => {
                           if (!option || !input) return true;
@@ -422,11 +423,11 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                 title={
                   <Space>
                     <FlagOutlined style={{ color: "#1e40af" }} />
-                    <Text strong style={{ color: "#1f2937", fontSize: 18 }}>Status and Priority</Text>
+                    <Text strong style={{ color: "#1f2937", fontSize: compact ? 16 : 18 }}>Status and Priority</Text>
                   </Space>
                 }
                 style={{ marginBottom: 24, borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
-                styles={{ header: { background: "#f8f9fa", borderBottom: "1px solid #e5e7eb" }, body: { padding: 24 } }}
+                styles={{ header: { background: "#f8f9fa", borderBottom: "1px solid #e5e7eb" }, body: { padding: compact ? 16 : 24 } }}
               >
                 <Form.Item
                   name="statusId"
@@ -439,7 +440,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                     showSearch
                     placeholder="Select status"
                     loading={stL}
-                    size="large"
+                    size={compact ? "middle" : "large"}
                     filterOption={(input, option) => {
                       if (!option || !input) return true;
                       const label = option.label as any;
@@ -469,7 +470,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                     showSearch
                     placeholder="Select priority"
                     loading={prL}
-                    size="large"
+                    size={compact ? "middle" : "large"}
                     filterOption={(input, option) => {
                       if (!option || !input) return true;
                       const label = option.label as any;
@@ -495,11 +496,11 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                 title={
                   <Space>
                     <ProjectOutlined style={{ color: "#1e40af" }} />
-                    <Text strong style={{ color: "#1f2937", fontSize: 18 }}>Project and Epic</Text>
+                    <Text strong style={{ color: "#1f2937", fontSize: compact ? 16 : 18 }}>Project and Epic</Text>
                   </Space>
                 }
                 style={{ borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
-                styles={{ header: { background: "#f8f9fa", borderBottom: "1px solid #e5e7eb" }, body: { padding: 24 } }}
+                styles={{ header: { background: "#f8f9fa", borderBottom: "1px solid #e5e7eb" }, body: { padding: compact ? 16 : 24 } }}
               >
                 <Form.Item name="projectId" label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Project</Text>} style={{ marginBottom: 20 }}>
                   <Select
@@ -507,7 +508,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                     showSearch
                     placeholder="Select project (optional)"
                     loading={pjL}
-                    size="large"
+                    size={compact ? "middle" : "large"}
                     filterOption={(input, option) => {
                       if (!option || !input) return true;
                       const label = option.label as any;
@@ -535,7 +536,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                     loading={epL}
                     disabled={!selectedProjectId || epL}
                     allowClear={!!selectedProjectId}
-                    size="large"
+                    size={compact ? "middle" : "large"}
                     filterOption={(input, option) => {
                       if (!option || !input) return true;
                       const label = option.label as any;
@@ -553,10 +554,10 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                 styles={{ body: { padding: 16 } }} 
                 style={{ marginTop: 16, borderRadius: 8, border: "1px solid #e5e7eb", background: "#f8f9fa", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
               >
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, flexWrap: "wrap" }}>
                   <Button
                     disabled={mutDetails.isPending}
-                    size="large"
+                    size={compact ? "middle" : "large"}
                     onClick={() => {
                       if (inlineMode) {
                         onClose?.();
@@ -565,7 +566,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                       }
                     }}
                     icon={<CloseOutlined />}
-                    style={{ minWidth: 140, borderColor: "#d1d5db", color: "#374151", borderRadius: 6 }}
+                    style={{ minWidth: 140, borderColor: "#d1d5db", color: "#374151", borderRadius: 6, flex: "1 1 140px" }}
                   >
                     Cancel
                   </Button>
@@ -573,7 +574,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                     type="primary"
                     htmlType="submit"
                     loading={mutDetails.isPending}
-                    size="large"
+                    size={compact ? "middle" : "large"}
                     icon={done ? <CheckOutlined /> : <SaveOutlined />}
                     aria-busy={mutDetails.isPending}
                     aria-live="polite"
@@ -586,6 +587,7 @@ export default function TaskEdit({ inlineMode = false, taskIdOverride, onClose }
                       borderRadius: 6,
                       boxShadow: "0 2px 4px rgba(59, 130, 246, 0.3)",
                       transition: "transform 80ms ease",
+                      flex: "1 1 180px",
                     }}
                   >
                     {mutDetails.isPending ? "Updating..." : done ? "Updated!" : "Update Task"}
