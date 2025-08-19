@@ -34,10 +34,10 @@ export default function NewEpic() {
       return await createEpic({
         name: v.name,
         description: v.description,
-        project: { id: v.projectId },
-        startDate: s ? s.format("YYYY-MM-DD") : undefined,
-        dueDate: d ? d.format("YYYY-MM-DD") : undefined,
-      } as any);
+        projectId: v.projectId,                 // <-- use projectId
+        startDate: s ? s.format("YYYY-MM-DD") : "",
+        dueDate: d ? d.format("YYYY-MM-DD") : "",
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["epics"] });
