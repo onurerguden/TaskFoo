@@ -5,8 +5,6 @@ import { Card, Space, Select, DatePicker, Tag, Typography, Avatar, Tooltip, Empt
 import PageHeader from "../components/PageHeader";
 import api from "../api/client";
 import type { Epic, Project, Status, Priority } from "../types";
-import { listStatuses } from "../api/statuses";
-import { listPriorities } from "../api/priorities";
 import { assignUsers } from "../api/tasks";
 import type { TaskListItemResponse, UserBrief } from "../api/tasks";
 import { listEpics } from "../api/epics";
@@ -95,6 +93,12 @@ function GanttChart({ tasks, onTaskUpdate, onEdit, onAssign, onDelete }: GanttCh
 
   const [updatingTasks, setUpdatingTasks] = useState<Set<number>>(new Set());
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [barMenu, setBarMenu] = useState<{ open: boolean; x: number; y: number; task: GanttTaskData | null }>({
+    open: false,
+    x: 0,
+    y: 0,
+    task: null,
+  });
   const ganttRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const lastMove = useRef<{ x: number } | null>(null);
@@ -295,6 +299,14 @@ const groupedTasks = useMemo(() => {
       newEnd = newStart.add(1, 'day');
     }
 
+    // If nothing changed (same start/end day), do not call backend
+    if (newStart.isSame(dragState.originalStart, 'day') && newEnd.isSame(dragState.originalEnd, 'day')) {
+      setDragState(null);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      return;
+    }
+
     // save to backend
     setUpdatingTasks(prev => new Set(prev).add(task.id));
     try {
@@ -341,6 +353,18 @@ const groupedTasks = useMemo(() => {
     };
   }, [dragState, onGlobalMouseMove, onGlobalMouseUp]);
 
+  React.useEffect(() => {
+  if (!barMenu.open) return;
+  const onDocDown = (e: MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    // Menü içindeyse kapatma
+    if (target?.closest('.ant-dropdown, .ant-dropdown-menu')) return;
+    setBarMenu({ open: false, x: 0, y: 0, task: null });
+  };
+  document.addEventListener("mousedown", onDocDown);
+  return () => document.removeEventListener("mousedown", onDocDown);
+}, [barMenu.open]);
+
   // Generate time grid
   const timeGrid = useMemo(() => {
     const months: { label: string; x: number; width: number }[] = [];
@@ -386,12 +410,18 @@ const groupedTasks = useMemo(() => {
       background: '#fff'
     }}>
       {/* Scrollable container */}
-      <div style={{
-        overflowX: 'auto',
-        overflowY: 'auto',
-        maxHeight: '80vh',
-        position: 'relative'
-      }}>
+      <div
+  style={{
+    overflowX: 'auto',
+    overflowY: 'auto',
+    maxHeight: '80vh',
+    position: 'relative'
+  }}
+  onClick={() => {
+    setBarMenu({ open: false, x: 0, y: 0, task: null });
+    setSelectedId(null); // highlight da kalksın
+  }}
+>
         <div
           ref={ganttRef}
           style={{
@@ -473,7 +503,7 @@ const groupedTasks = useMemo(() => {
                           ]
                         }}
                       >
-                        <Button type="text" size="small" icon={<MoreOutlined />} />
+                        <Button type="text" size="small" icon={<MoreOutlined />}  onClick={(e) => { e.stopPropagation(); setSelectedId(task.id); }} />
                       </Dropdown>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -596,13 +626,20 @@ const groupedTasks = useMemo(() => {
           </div>
 
           {/* Chart area */}
-          <div style={{
-            position: 'absolute',
-            top: headerHeight,
-            left: LABEL_COL_WIDTH,
-            width: chartWidth,
-            height: totalHeight - headerHeight
-          }}>
+          <div
+  style={{
+    position: 'absolute',
+    top: headerHeight,
+    left: LABEL_COL_WIDTH,
+    width: chartWidth,
+    height: totalHeight - headerHeight
+  }}
+  onClick={() => {
+    setBarMenu({ open: false, x: 0, y: 0, task: null });
+    
+    setSelectedId(null); // highlight da kalksın
+  }}
+>
             {/* Background grid with weekend shading */}
             <svg
               style={{
@@ -730,32 +767,37 @@ const groupedTasks = useMemo(() => {
                     const isDragging = dragState?.taskId === task.id;
                     const isSelected = selectedId === task.id;
 
-                    return (
-                      <div
-                        key={task.id}
-                        data-task-id={task.id}
-                        style={{
-                          position: 'absolute',
-                          left: startPos,
-                          top: taskY + 8,
-                          width: width,
-                          height: 32,
-                          background: `linear-gradient(135deg, ${getStatusColor(task.status)}, ${getStatusColor(task.status)}dd)`,
-                          borderRadius: 6,
-                          cursor: isDragging ? 'grabbing' : 'grab',
-                          border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
-                          boxShadow: isDragging ? '0 4px 12px rgba(59, 130, 246, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '0 8px',
-                          transition: isDragging ? 'none' : 'all 0.2s ease',
-                          transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-                          zIndex: isDragging ? 100 : 1,
-                          opacity: isUpdating ? 0.7 : 1
-                        }}
-                        onMouseDown={(e) => beginDrag(e, task, 'move')}
-                        onClick={(e) => { e.stopPropagation(); setSelectedId(task.id); }}
-                      >
+                  return (
+                    <div
+                      key={task.id}
+                      data-task-id={task.id}
+                      style={{
+                        position: 'absolute',
+                        left: startPos,
+                        top: taskY + 8,
+                        width: width,
+                        height: 32,
+                        background: `linear-gradient(135deg, ${getStatusColor(task.status)}, ${getStatusColor(task.status)}dd)`,
+                        borderRadius: 6,
+                        cursor: isDragging ? 'grabbing' : 'grab',
+                        border: isSelected ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)',
+                        boxShadow: isDragging ? '0 4px 12px rgba(59, 130, 246, 0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 8px',
+                        transition: isDragging ? 'none' : 'all 0.2s ease',
+                        transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+                        zIndex: isDragging ? 100 : 1,
+                        opacity: isUpdating ? 0.7 : 1
+                      }}
+                      onMouseDown={(e) => beginDrag(e, task, 'move')}
+                      onClick={(e) => { e.stopPropagation(); setSelectedId(task.id); }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(task.id); // highlight
+                        setBarMenu({ open: true, x: e.clientX, y: e.clientY, task });
+                      }}
+                    >
                         {/* Resize handles (visible on hover/selection) */}
                         <div
                           style={{
@@ -845,6 +887,63 @@ const groupedTasks = useMemo(() => {
           </div>
         </div>
       </div>
+
+      {/* Floating menu for task bar double-click */}
+      {barMenu.open && (
+        <Dropdown
+          open
+          placement="bottomLeft"
+          onOpenChange={(o) => {
+            if (!o) setBarMenu({ open: false, x: 0, y: 0, task: null });
+          }}
+          menu={{
+            items: [
+              {
+                key: 'edit',
+                label: 'Edit Task',
+                icon: <EditOutlined />,
+                onClick: () => {
+                  if (barMenu.task && onEdit) onEdit(barMenu.task.id);
+                  setBarMenu({ open: false, x: 0, y: 0, task: null });
+                },
+              },
+              {
+                key: 'assign',
+                label: 'Assign Users',
+                icon: <UserAddOutlined />,
+                onClick: () => {
+                  if (barMenu.task && onAssign) {
+                    const ids = (barMenu.task.assignees || []).map((u) => (u as any).id);
+                    onAssign(barMenu.task.id, ids);
+                  }
+                  setBarMenu({ open: false, x: 0, y: 0, task: null });
+                },
+              },
+              { type: 'divider' as const },
+              {
+                key: 'delete',
+                label: <span style={{ color: '#ef4444' }}>Delete Task</span>,
+                icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
+                onClick: () => {
+                  if (barMenu.task && onDelete) onDelete(barMenu.task.id, barMenu.task.title);
+                  setBarMenu({ open: false, x: 0, y: 0, task: null });
+                },
+              },
+            ],
+          }}
+        >
+          <span
+            style={{
+              position: 'fixed',
+              left: barMenu.x,
+              top: barMenu.y,
+              width: 1,
+              height: 1,
+              display: 'inline-block',
+            }}
+          />
+        </Dropdown>
+      )}
 
       {/* Instructions */}
       <div style={{
