@@ -1,14 +1,18 @@
 /* src/pages/TasksGantt.tsx */
 import React, { useMemo, useState, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, Space, Select, DatePicker, Tag, Typography, Avatar, Tooltip, Empty, message } from "antd";
+import { Card, Space, Select, DatePicker, Tag, Typography, Avatar, Tooltip, Empty, message, Dropdown, Button, Modal } from "antd";
 import PageHeader from "../components/PageHeader";
 import api from "../api/client";
 import type { Epic, Project } from "../types";
+import { assignUsers } from "../api/tasks";
 import type { TaskListItemResponse, UserBrief } from "../api/tasks";
 import { listEpics } from "../api/epics";
 import dayjs, { Dayjs } from "dayjs";
-import { SyncOutlined } from "@ant-design/icons";
+import { SyncOutlined, MoreOutlined, EditOutlined, UserAddOutlined, DeleteOutlined } from "@ant-design/icons";
+
+import { listUsers } from "../api/users";
+import TaskEdit from "./TaskEdit";
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -73,9 +77,12 @@ interface GanttTaskData {
 interface GanttChartProps {
   tasks: GanttTaskData[];
   onTaskUpdate: (taskId: number, startDate: string, dueDate: string) => Promise<void>;
+  onEdit?: (taskId: number) => void;
+  onAssign?: (taskId: number, currentAssigneeIds: number[]) => void;
+  onDelete?: (taskId: number, title?: string) => void;
 }
 
-function GanttChart({ tasks, onTaskUpdate }: GanttChartProps) {
+function GanttChart({ tasks, onTaskUpdate, onEdit, onAssign, onDelete }: GanttChartProps) {
   const [dragState, setDragState] = useState<{
     taskId: number;
     mode: 'move' | 'resize-left' | 'resize-right';
@@ -443,7 +450,7 @@ const groupedTasks = useMemo(() => {
                     key={task.id}
                     style={{
                       height: rowHeight,
-                      padding: '8px 16px',
+                      padding: '0px 0px',
                       borderBottom: '1px solid #f1f5f9',
                       display: 'flex',
                       alignItems: 'center',
@@ -451,6 +458,22 @@ const groupedTasks = useMemo(() => {
                     }}
                     onClick={() => setSelectedId(task.id)}
                   >
+                    <div style={{ marginRight: 1 }} onClick={(e) => e.stopPropagation()}>
+                      <Dropdown
+                        trigger={["click"]}
+                        placement="bottomRight"
+                        menu={{
+                          items: [
+                            { key: 'edit', label: 'Edit Task', icon: <EditOutlined />, onClick: () => onEdit && onEdit(task.id) },
+                            { key: 'assign', label: 'Assign Users', icon: <UserAddOutlined />, onClick: () => onAssign && onAssign(task.id, (task.assignees || []).map(u => (u as any).id)) },
+                            { type: 'divider' as const },
+                            { key: 'delete', label: <span style={{ color: '#ef4444' }}>Delete Task</span>, icon: <DeleteOutlined style={{ color: '#ef4444' }} />, onClick: () => onDelete && onDelete(task.id, task.title) },
+                          ]
+                        }}
+                      >
+                        <Button type="text" size="small" icon={<MoreOutlined />} />
+                      </Dropdown>
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontSize: 13,
@@ -851,6 +874,12 @@ export default function TasksGantt() {
   const [epicId, setEpicId] = useState<number | undefined>();
   const [range, setRange] = useState<[Dayjs, Dayjs] | undefined>();
 
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignSelection, setAssignSelection] = useState<number[]>([]);
+  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: listUsers });
+
   // Epic to project mapping
   const epicToProjectId = useMemo(() => {
     const map: Record<number, number | undefined> = {};
@@ -918,6 +947,49 @@ export default function TasksGantt() {
       throw err;
     }
   }, [qc]);
+
+  const openEdit = (id: number) => setEditingTaskId(id);
+  const openAssign = (id: number, preset: number[]) => {
+    setAssigningTaskId(id);
+    setAssignSelection(preset);
+    setAssignOpen(true);
+  };
+  const handleAssign = async () => {
+    if (!assigningTaskId) return;
+    try {
+      // Find latest version from the current tasks query result
+      const current = (tasks as TaskListItemResponse[]).find(t => t.id === assigningTaskId);
+      const version = current?.version ?? 0;
+
+      await assignUsers(assigningTaskId, assignSelection, version);
+
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      message.success("Assignees updated", 0.8);
+      setAssignOpen(false);
+      setAssigningTaskId(null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "Failed to update assignees";
+      message.error(msg);
+    }
+  };
+  const confirmDelete = (id: number, title?: string) => {
+    Modal.confirm({
+      title: `Delete task${title ? `: ${title}` : ""}?`,
+      content: "This action cannot be undone.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await api.delete(`/api/tasks/${id}`);
+          qc.invalidateQueries({ queryKey: ["tasks"] });
+          message.success("Task deleted", 0.8);
+        } catch (err: any) {
+          const msg = err?.response?.data?.message || err?.message || "Failed to delete task";
+          message.error(msg);
+        }
+      }
+    });
+  };
 
   const datasetEmpty = ganttTasks.length === 0;
 
@@ -1014,13 +1086,87 @@ export default function TasksGantt() {
           </Card>
         ) : (
           <Card styles={{ body: { padding: 0 } }}>
-            <GanttChart 
-              tasks={ganttTasks} 
+            <GanttChart
+              tasks={ganttTasks}
               onTaskUpdate={handleTaskUpdate}
+              onEdit={openEdit}
+              onAssign={(id, ids) => openAssign(id, ids)}
+              onDelete={(id, title) => confirmDelete(id, title)}
             />
           </Card>
         )}
       </div>
+      {/* Edit Task Modal */}
+      <Modal
+        title={null}
+        open={!!editingTaskId}
+        onCancel={() => setEditingTaskId(null)}
+        footer={null}
+        width="min(960px, 88vw)"
+        style={{ top: 24 }}
+        destroyOnClose
+        styles={{ body: { padding: 0, overflow: 'hidden' } }}
+      >
+        {editingTaskId && (
+          <div style={{ maxHeight: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', background: '#fff', position: 'sticky', top: 0, zIndex: 1 }}>
+              <Text strong style={{ fontSize: 16 }}>Edit Task — #{editingTaskId}</Text>
+            </div>
+            <div style={{ overflow: 'auto', padding: 16 }}>
+              <TaskEdit
+                inlineMode
+                taskIdOverride={editingTaskId}
+                onClose={() => {
+                  setEditingTaskId(null);
+                  qc.invalidateQueries({ queryKey: ['tasks'] });
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
+      {/* Assign Users Modal */}
+      <Modal
+        title="Assign Users"
+        open={assignOpen}
+        onCancel={() => setAssignOpen(false)}
+        onOk={handleAssign}
+        okText="Save"
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: "100%" }}>
+          <Text type="secondary">Select users to assign to this task.</Text>
+          <Select
+            mode="multiple"
+            style={{ width: "100%" }}
+            placeholder="Select users"
+            value={assignSelection}
+            onChange={(vals) => setAssignSelection(vals as number[])}
+            maxTagCount="responsive"
+            showSearch
+            filterOption={(input, option) => {
+              if (!option) return true;
+              const lbl = (option.label as any);
+              const txt = typeof lbl === 'string' ? lbl : (lbl?.props?.children?.[1] ?? "");
+              return String(txt).toLowerCase().includes(input.toLowerCase());
+            }}
+            options={users.map((u: any) => ({
+              value: u.id,
+              label: (
+                <Space>
+                  <Avatar
+                    size="small"
+                    style={{ background: colorFromId(u.id), fontSize: 11 }}
+                  >
+                    {initialsFromBrief(u)}
+                  </Avatar>
+                  {getDisplayName(u)}
+                </Space>
+              ),
+            }))}
+          />
+        </Space>
+      </Modal>
     </div>
   );
 }
