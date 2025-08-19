@@ -294,7 +294,6 @@ const groupedTasks = useMemo(() => {
         newStart.format('YYYY-MM-DD'),
         newEnd.format('YYYY-MM-DD')
       );
-      message.success('Task dates updated', 1);
     } catch (error: any) {
       // revert to original dates
       paintDuringDrag(task.id, dragState.originalStart, dragState.originalEnd);
