@@ -37,13 +37,25 @@ export default function PageHeader({ title, actionText, to, style }: Props) {
           {title}
         </Typography.Title>
         <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => nav(to)}
-          style={{ background: "white", color: "#1e40af", border: "none" }}
-        >
-          {actionText}
-        </Button>
+  type="primary"
+  onClick={() => nav(to)}
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "6px 14px",
+    background: "white",
+    color: "#1e40af",
+    border: "none",
+    borderRadius: 8,
+    fontWeight: 600,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+    whiteSpace: "nowrap", // küçülünce yazının taşmasını engeller
+  }}
+>
+  <PlusOutlined style={{ fontSize: 16 }} />
+  <span>{actionText}</span>
+</Button>
       </div>
     </div>
   );
