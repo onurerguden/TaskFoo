@@ -958,6 +958,7 @@ const groupedTasks = useMemo(() => {
           <span>↔️ <strong>Drag edges</strong> to resize duration</span>
           <span>🔴 <strong>Red dashed line</strong> shows today</span>
           <span>🗓️ <strong>Weekend</strong> columns are shaded</span>
+          <span>⓶ <strong>Double Click</strong> for settings</span>
         </Space>
       </div>
     </div>
