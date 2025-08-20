@@ -1,13 +1,14 @@
 /* src/pages/Projects.tsx */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Table, Typography, Alert, Space, Button, Popconfirm, App, Tag, Progress, Avatar, Tooltip } from "antd";
+import { Table, Typography, Alert, Space, Button, Popconfirm, App, Tag, Progress, Avatar, Tooltip, Card, Input, Select } from "antd";
 import { DeleteOutlined, EyeOutlined, ProjectOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import PageHeader from "../components/PageHeader";
 import { listEpics } from "../api/epics";
 import { listUsers } from "../api/users";
+import { listStatuses } from "../api/statuses";
 import type { Epic, User } from "../types";
 import type { TaskListItemResponse, UserBrief } from "../api/tasks";
 
@@ -33,6 +34,12 @@ function colorFromId(id: number) {
   return `hsl(${(id * 137.508) % 360}deg, 65%, 45%)`;
 }
 
+type FilterState = {
+  search: string;
+  statusIds: number[];
+  assigneeIds: number[];
+};
+
 /** Row type coming from /api/projects */
  type ProjectRow = {
   id: number;
@@ -44,6 +51,12 @@ export default function Projects() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const { message } = App.useApp();
+
+  const [filters, setFilters] = useState<FilterState>({
+    search: "",
+    statusIds: [],
+    assigneeIds: [],
+  });
 
   const { data: projects = [], isLoading, isError, error } = useQuery<ProjectRow[]>({
     queryKey: ["projects"],
@@ -66,6 +79,8 @@ export default function Projects() {
     queryKey: ["users"],
     queryFn: listUsers,
   });
+
+  const { data: statuses = [] } = useQuery({ queryKey: ["statuses"], queryFn: listStatuses });
 
   const userMap = useMemo(() => {
     const m = new Map<number, User>();
@@ -92,6 +107,45 @@ export default function Projects() {
     onError: (e: any) => message.error(e?.response?.data?.message ?? "Delete failed"),
   });
 
+  const filteredProjects = useMemo(() => {
+    return (projects || []).filter((p) => {
+      // text search over name + description
+      if (filters.search) {
+        const s = filters.search.toLowerCase();
+        const inName = (p.name || "").toLowerCase().includes(s);
+        const inDesc = (p.description || "").toLowerCase().includes(s);
+        if (!inName && !inDesc) return false;
+      }
+
+      // derive all tasks that belong to this project
+      const projectTasks = (tasks as TaskListItemResponse[]).filter((t) => {
+        const epicId = t.epic?.id;
+        const pid = epicId != null ? epicToProjectId[epicId] : undefined;
+        return pid === p.id;
+      });
+
+      // status filter: keep projects that have ANY task with selected statuses
+      if (filters.statusIds.length) {
+        const anyStatus = projectTasks.some((t) => {
+          const sid = t.status?.id ? Number(t.status.id) : undefined;
+          return !!sid && filters.statusIds.includes(sid);
+        });
+        if (!anyStatus) return false;
+      }
+
+      // assignee filter: keep projects that have ANY task assigned to selected users
+      if (filters.assigneeIds.length) {
+        const anyAssignee = projectTasks.some((t) => {
+          const ids = (t.assignees || []).map((u) => Number((u as any).id));
+          return filters.assigneeIds.some((id) => ids.includes(id));
+        });
+        if (!anyAssignee) return false;
+      }
+
+      return true;
+    });
+  }, [projects, tasks, filters, epicToProjectId]);
+
   if (isError) {
     return (
       <Alert type="error" message="Failed to load projects" description={(error as Error)?.message} showIcon />
@@ -101,20 +155,33 @@ export default function Projects() {
   const columns = useMemo(
     () => [
       {
-        title: "Project",
+        title: "Project Name",
+        width: 300,
         render: (_: any, r: ProjectRow) => (
           <Space>
             <ProjectOutlined style={{ color: "#1e40af" }} />
             <div>
-              <Text strong>{r.name}</Text>
-              <div style={{ fontSize: 12, color: "#6b7280" }}>{r.description || "-"}</div>
+              <Text strong style={{ display: "block" }}>{r.name}</Text>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#6b7280",
+                  maxWidth: 360,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis"
+                }}
+                title={r.description || "-"}
+              >
+                {r.description || "-"}
+              </div>
             </div>
           </Space>
         ),
       },
       {
         title: "Tasks",
-        width: 320,
+        width: 300,
         render: (_: any, r: ProjectRow) => {
           const list = (tasks as TaskListItemResponse[]).filter((t) => {
             const epicId = t.epic?.id;
@@ -126,20 +193,22 @@ export default function Projects() {
           const ip = list.filter((t) => t.status?.name === "In Progress").length;
           const rv = list.filter((t) => t.status?.name === "Review").length;
           const dn = list.filter((t) => t.status?.name === "Done").length;
+          const ar = list.filter((t) => t.status?.name === "Archive").length;
           return (
-            <Space size={6} wrap>
+            <Space size={8} wrap>
               <Tag>{total} total</Tag>
               <Tag>{td} To Do</Tag>
               <Tag color="processing">{ip} In Progress</Tag>
               <Tag color="warning">{rv} Review</Tag>
               <Tag color="success">{dn} Done</Tag>
+              <Tag color="default">{ar} Archive</Tag>
             </Space>
           );
         },
       },
       {
         title: "Assignees",
-        width: 260,
+        width: 120,
         render: (_: any, r: ProjectRow) => {
           const list = (tasks as TaskListItemResponse[]).filter((t) => {
             const epicId = t.epic?.id;
@@ -178,7 +247,7 @@ export default function Projects() {
       },
       {
         title: "Completion",
-        width: 180,
+        width: 260,
         render: (_: any, r: ProjectRow) => {
           const list = (tasks as TaskListItemResponse[]).filter((t) => {
             const epicId = t.epic?.id;
@@ -194,7 +263,7 @@ export default function Projects() {
       {
         title: "Actions",
         key: "actions",
-        width: 220,
+        width: 180,
         render: (_: any, r: ProjectRow) => (
           <Space>
             <Button icon={<EyeOutlined />} onClick={() => nav(`/board?projectId=${r.id}`)}>
@@ -220,16 +289,91 @@ export default function Projects() {
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <PageHeader title="Projects" actionText="New Project" to="/projects/new" />
 
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: 12 }}>
-        <Table<ProjectRow>
-          size="middle"
-          loading={isLoading}
-          rowKey="id"
-          dataSource={projects}
-          pagination={{ pageSize: 10, showSizeChanger: false }}
-          columns={columns as any}
-        />
+      <div style={{ padding: 12 }}>
+        <Card
+          size="small"
+          style={{ borderRadius: 10, marginBottom: 12 }}
+          bodyStyle={{ background: "#f9fafb", borderRadius: 8, padding: 12 }}
+          title={<Text strong>Filters</Text>}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              flexWrap: "wrap"
+            }}
+          >
+            <Input
+              placeholder="Search project name or description…"
+              allowClear
+              value={filters.search}
+              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+              style={{ width: 280 }}
+            />
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="Task Statuses in Project"
+              value={filters.statusIds}
+              onChange={(v) => setFilters((f) => ({ ...f, statusIds: v as number[] }))}
+              options={statuses.map((s: any) => ({ value: s.id, label: s.name }))}
+              maxTagCount="responsive"
+              style={{ minWidth: 240 }}
+            />
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="Assignees in Project"
+              value={filters.assigneeIds}
+              onChange={(v) => setFilters((f) => ({ ...f, assigneeIds: v as number[] }))}
+              options={users.map((u: any) => ({ value: u.id, label: `${u.name || ""}${u.surname ? ` ${u.surname}` : ""}`.trim() }))}
+              maxTagCount="responsive"
+              showSearch
+              optionFilterProp="label"
+              style={{ minWidth: 260 }}
+            />
+            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+              <Button onClick={() => setFilters({ search: "", statusIds: [], assigneeIds: [] })}>
+                Reset
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <Card
+          size="small"
+          style={{ borderRadius: 10 }}
+          bodyStyle={{ padding: 0 }}
+          title={<Text strong>Projects</Text>}
+        >
+          <Table<ProjectRow>
+            size="small"
+            sticky
+            loading={isLoading}
+            rowKey="id"
+            dataSource={filteredProjects}
+            pagination={{ pageSize: 10, showSizeChanger: false }}
+            columns={columns as any}
+            tableLayout="fixed"
+            rowClassName={() => "proj-row"}
+          />
+        </Card>
       </div>
+        <style>{`
+          .proj-row {
+            background: #fff;
+          }
+          .proj-row td {
+            background: transparent !important;
+          }
+          .ant-table-wrapper .ant-table-tbody > tr.proj-row > td {
+            border-bottom: 8px solid transparent; /* spacing between rows */
+          }
+          .ant-table-wrapper .ant-table-tbody > tr.proj-row:hover > td {
+            background: #fafafa !important;
+          }
+        `}</style>
     </div>
   );
 }

@@ -168,10 +168,8 @@ export default function Dashboard() {
       padding: "0"
     }}>
       <PageHeaderJust title="Dashboard" />
-      {/* Main Content */}
-      <div style={{ 
-        maxWidth: "1200px", 
-        margin: "0 auto",
+      {/* Main Content (full-width like Board) */}
+      <div style={{
         padding: "24px"
       }}>
         {/* Status Metrics */}
