@@ -1,7 +1,7 @@
 /* src/pages/Projects.tsx */
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Table, Typography, Alert, Space, Button, Popconfirm, App, Tag, Progress, Avatar, Tooltip, Card, Input, Select } from "antd";
+import { Table, Typography, Alert, Space, Button, Popconfirm, App, Tag, Progress, Avatar, Tooltip, Card, Input, Select, Modal } from "antd";
 import { DeleteOutlined, EyeOutlined, ProjectOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
@@ -99,12 +99,19 @@ export default function Projects() {
   }, [epics]);
 
   const del = useMutation({
-    mutationFn: async (id: number) => api.delete(`/api/projects/${id}`),
+    mutationFn: async (id: number) => {
+      const res = await api.delete(`/api/projects/${id}`);
+      return res.data;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["projects"] });
       message.success("Project deleted");
     },
-    onError: (e: any) => message.error(e?.response?.data?.message ?? "Delete failed"),
+    onError: (e: any) => {
+      const msg = e?.response?.data?.message || e?.message || "Delete failed";
+      console.error("Project delete error:", e);
+      message.error(msg);
+    },
   });
 
   const filteredProjects = useMemo(() => {
@@ -271,12 +278,45 @@ export default function Projects() {
             </Button>
             <Popconfirm
               title="Delete this project?"
+              description="This action cannot be undone."
               okText="Delete"
-              okButtonProps={{ danger: true }}
+              okButtonProps={{ danger: true, loading: del.isPending }}
               cancelText="Cancel"
-              onConfirm={() => del.mutate(r.id)}
+              onConfirm={() => {
+                // Check dependent records before delete to prevent FK 500s
+                const projectTasks = (tasks as TaskListItemResponse[]).filter((t) => {
+                  const epicId = t.epic?.id;
+                  const pid = epicId != null ? epicToProjectId[epicId] : undefined;
+                  return pid === r.id;
+                });
+                const epicsCount = (epics as Epic[]).filter((e) => e.project?.id === r.id).length;
+
+                if (projectTasks.length > 0 || epicsCount > 0) {
+                  Modal.warning({
+                    title: "Project can't be deleted",
+                    content: (
+                      <div>
+                        This project has
+                        {" "}
+                        <b>{projectTasks.length}</b> task(s)
+                        {epicsCount > 0 ? (
+                          <>
+                            {" "}and <b>{epicsCount}</b> epic(s)
+                          </>
+                        ) : null}
+                        . Please move/delete or archive them first.
+                      </div>
+                    ),
+                  });
+                  return;
+                }
+
+                del.mutate(r.id);
+              }}
             >
-              <Button danger icon={<DeleteOutlined />}>Delete</Button>
+              <Button danger icon={<DeleteOutlined />} disabled={del.isPending}>
+                Delete
+              </Button>
             </Popconfirm>
           </Space>
         ),
@@ -342,11 +382,12 @@ export default function Projects() {
         </Card>
 
         <Card
-          size="small"
-          style={{ borderRadius: 10 }}
-          bodyStyle={{ padding: 0 }}
-          title={<Text strong>Projects</Text>}
-        >
+  size="small"
+  style={{ borderRadius: 10, overflowX: "auto" }}   // ← eklendi
+  bodyStyle={{ padding: 0 }}
+  title={<Text strong>Projects</Text>}
+  className="projects-card"
+>
           <Table<ProjectRow>
             size="small"
             sticky
@@ -361,17 +402,34 @@ export default function Projects() {
         </Card>
       </div>
         <style>{`
-          .proj-row {
-            background: #fff;
-          }
-          .proj-row td {
+          /* Make the table background transparent so the group background shows */
+          .projects-card .ant-table,
+          .projects-card .ant-table-container {
             background: transparent !important;
           }
-          .ant-table-wrapper .ant-table-tbody > tr.proj-row > td {
-            border-bottom: 8px solid transparent; /* spacing between rows */
+          .projects-card .ant-table-tbody > tr.proj-row > td {
+            background: #ffffff !important;
+            border: none;
+            border-bottom: 1px solid #e5e7eb; /* thin grey separator like Tasks */
+            transition: background 0.2s ease;
           }
-          .ant-table-wrapper .ant-table-tbody > tr.proj-row:hover > td {
+          .projects-card .ant-table-tbody > tr.proj-row:last-child > td {
+            border-bottom: none;
+          }
+          /* Header transparent */
+          .projects-card .ant-table-thead > tr > th {
+            background: transparent !important;
+          }
+          /* Hover background on rows */
+          .projects-card .ant-table-tbody > tr.proj-row:hover > td {
             background: #fafafa !important;
+          }
+          /* Thin separator above pagination to visually split page controls */
+          .projects-card .ant-table-pagination {
+            border-top: 1px solid #e5e7eb;
+            margin-top: 8px;
+            padding-top: 12px;
+            background: transparent;
           }
         `}</style>
     </div>
