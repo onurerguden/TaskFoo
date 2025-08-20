@@ -6,10 +6,9 @@ import { DeleteOutlined, EyeOutlined, ProjectOutlined } from "@ant-design/icons"
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import PageHeader from "../components/PageHeader";
-import { listEpics } from "../api/epics";
 import { listUsers } from "../api/users";
 import { listStatuses } from "../api/statuses";
-import type { Epic, User } from "../types";
+import type { User } from "../types";
 import type { TaskListItemResponse, UserBrief } from "../api/tasks";
 
 const { Text } = Typography;
