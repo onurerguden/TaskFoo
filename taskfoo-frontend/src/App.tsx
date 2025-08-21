@@ -346,7 +346,7 @@ export default function App() {
       />
 
       {/* bilinmeyen route → dashboard'a */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/board" replace />} />
 
      
 
