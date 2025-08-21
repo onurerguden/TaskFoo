@@ -18,6 +18,7 @@ import {
   EyeTwoTone,
 } from "@ant-design/icons";
 import { register, login } from "../api/auth";
+import headerLogo from "../assets/header-logo.png";
 
 const { Title, Text } = Typography;
 
@@ -33,14 +34,7 @@ export default function Register() {
   const [form] = Form.useForm<RegisterFormValues>();
   const [loading, setLoading] = useState(false);
 
-  const cardStyle: React.CSSProperties = {
-    maxWidth: 420,
-    width: "100%",
-    borderRadius: 16,
-    boxShadow: "0 10px 40px rgba(0,0,0,0.08)",
-    border: "1px solid #f0f0f0",
-    background: "#ffffff",
-  };
+
 
   const containerStyle: React.CSSProperties = {
     minHeight: "100vh",
@@ -71,6 +65,38 @@ export default function Register() {
     fontWeight: 400,
     margin: 0,
   };
+
+  const wrapperStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 420,
+  borderRadius: 16,            // tüm kart için yuvarlak kenar
+  boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+  overflow: 'hidden',          // şapkanın üst köşe yuvarlakları görünür
+  background: '#ffffff'
+};
+
+const capStyle: React.CSSProperties = {
+  height: 88,                  // sabit şapka yüksekliği
+  background: '#062B43',       // koyu mavi (uygulamadaki ton)
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderTopLeftRadius: 16,     // üst köşeleri burada da ver
+  borderTopRightRadius: 16,
+  position: 'relative'
+};
+
+const cardStyle: React.CSSProperties = {
+  width: '100%',
+  borderBottomLeftRadius: 16,
+  borderBottomRightRadius: 16,
+  borderTopLeftRadius: 0,      // şapkanın altına düz otursun
+  borderTopRightRadius: 0,
+  border: '1px solid #f0f0f0',
+  borderTop: 'none',           // üstte beyaz çizgi görünmesin
+  background: '#ffffff'
+};
+
 
   const onFinish = async (values: RegisterFormValues) => {
     setLoading(true);
@@ -105,7 +131,20 @@ export default function Register() {
 
   return (
     <div style={containerStyle}>
-      <Card style={cardStyle} bordered={false}>
+      <div style={wrapperStyle}>
+        <div style={capStyle}>
+          <img
+            src={headerLogo}
+            alt="Taskfoo Logo"
+            style={{
+              height: 356,             // istediğin gibi kalsın; parent 88px olduğu için contain ile sığar
+              objectFit: 'contain',
+              transform: 'translateY(22px)'  // merkezin biraz altı
+            }}
+          />
+        </div>
+        <Card style={cardStyle} bordered={false}>
+
         {/* Header Section */}
         <div style={headerStyle}>
           <Title level={2} style={titleStyle}>
@@ -243,6 +282,7 @@ export default function Register() {
           </Text>
         </div>
       </Card>
+    </div>
     </div>
   );
 }
