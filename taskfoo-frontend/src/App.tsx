@@ -127,16 +127,13 @@ function AppShell({ children }: { children: JSX.Element }) {
             {currentUser && (
               <Dropdown
                 placement="bottomRight"
+                overlayStyle={{ minWidth: 240 }}
                 menu={{
                   items: [
                     {
                       key: "email",
                       disabled: true,
-                      label: (
-                        <div style={{ opacity: 0.85 }}>
-                          {currentUser.email}
-                        </div>
-                      ),
+                      label: <div style={{ opacity: 0.85 }}>{currentUser.email}</div>,
                     },
                     { type: "divider" },
                     {
@@ -152,35 +149,53 @@ function AppShell({ children }: { children: JSX.Element }) {
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
-                    gap: 10,
-                    padding: "4px 12px",
-                    borderRadius: 9999,
-                    background: antToken.colorFillTertiary,
-                    border: `1px solid ${antToken.colorBorderSecondary}`,
-                    boxShadow: `0 1px 0 ${antToken.colorSplit}`,
+                    gap: 12,
+                    height: 40,
+                    padding: "6px 12px",
+                    borderRadius: 4,
+                    background: "rgba(6, 43, 67, 0.85)", // koyu mavi-cam efekt
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    boxShadow: "0 6px 24px rgba(0,0,0,0.25)",
+                    color: "#e6f4ff",
+                    transition: "transform .12s ease, box-shadow .12s ease",
                   }}
                 >
-                  <Tooltip title={`${currentUser.name} ${currentUser.surname}`}>
-                    <Avatar
-                      size={36}
+                  <div style={{ position: "relative", lineHeight: 0 }}>
+                    <Tooltip title={`${currentUser.name} ${currentUser.surname}`}>
+                      <Avatar
+                        size={36}
+                        style={{
+                          backgroundColor: colorFromString(
+                            currentUser.email || currentUser.name || "user"
+                          ),
+                          color: "#fff",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {initials(currentUser)}
+                      </Avatar>
+                    </Tooltip>
+                    <span
                       style={{
-                        backgroundColor: colorFromString(
-                          currentUser.email || currentUser.name || "user"
-                        ),
-                        color: "#fff",
-                        fontWeight: 700,
+                        position: "absolute",
+                        right: -2,
+                        bottom: -2,
+                        width: 10,
+                        height: 10,
+                        borderRadius: 999,
+                        background: "#52c41a", // online dot
+                        border: "2px solid #0b1b29",
                       }}
-                    >
-                      {initials(currentUser)}
-                    </Avatar>
-                  </Tooltip>
+                    />
+                  </div>
 
                   <div style={{ lineHeight: 1.1, display: "flex", flexDirection: "column" }}>
                     <span
                       style={{
                         fontWeight: 700,
-                        fontSize: 15,
+                        fontSize: 14,
                         letterSpacing: 0.2,
+                        color: "#e6f4ff",
                       }}
                     >
                       {currentUser.name} {currentUser.surname}
@@ -189,6 +204,7 @@ function AppShell({ children }: { children: JSX.Element }) {
                       style={{
                         fontSize: 12,
                         opacity: 0.75,
+                        color: "#c8d1da",
                       }}
                     >
                       {currentUser.email}
