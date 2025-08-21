@@ -14,8 +14,16 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:5173","http://127.0.0.1:5173")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH");
+                        .allowedOrigins(
+                                "http://localhost:5173",
+                                "http://127.0.0.1:5173"
+                        )
+                        .allowedMethods("GET","POST","PUT","DELETE","PATCH","OPTIONS")
+                        .allowedHeaders("*")
+                        .exposedHeaders("Authorization")
+                        // Cookie tabanlı auth kullanıyorsan aç:
+                        //.allowCredentials(true)
+                        .maxAge(3600);
             }
         };
     }

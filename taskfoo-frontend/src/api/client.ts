@@ -1,8 +1,16 @@
 import axios from "axios";
 
+const baseURL = import.meta.env.VITE_API_URL;
+
 const api = axios.create({
-  baseURL: "/",        // proxy kullanıyorsan "/"
+  baseURL: baseURL,
   timeout: 10000,
 });
 
-export default api;     // <-- DEFAULT EXPORT
+api.interceptors.request.use((config) => {
+  const t = localStorage.getItem("token");
+  if (t) config.headers.Authorization = `Bearer ${t}`;
+  return config;
+});
+
+export default api;

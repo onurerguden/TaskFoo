@@ -10,12 +10,12 @@ public class UserMapper {
 
     public static UserBriefDto toBrief(User u) {
         if (u == null) return null;
-        String role = u.getRole();
         return new UserBriefDto(
                 u.getId(),
                 safe(u.getName()),
                 safe(u.getSurname()),
-                role
+                safe(u.getEmail()),
+                u.getRoles()
         );
     }
 

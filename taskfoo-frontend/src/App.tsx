@@ -1,9 +1,10 @@
 // src/App.tsx
-import { Layout, theme } from "antd";
+import { useEffect, useState, type JSX } from "react";
+import { Layout, theme, Dropdown, Avatar, Space, Tooltip } from "antd";
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
-import Sidebar from "./components/Sidebar";
 import Board from "./pages/Board";
 import NewTask from "./pages/NewTask";
 import NewProject from "./pages/NewProject";
@@ -12,33 +13,88 @@ import NewUser from "./pages/NewUser";
 import Users from "./pages/Users";
 import Epics from "./pages/Epics";
 import Projects from "./pages/Projects";
-import headerLogo from "./assets/header-logo.png";
-import TaskEdit from "./pages/TaskEdit";
-
-import { useEffect, useState } from "react";
-import { connectWebSocket, disconnectWebSocket, initTaskWs } from "./ws/client"; // 👈
 import TasksGantt from "./pages/TasksGantt";
+import TaskEdit from "./pages/TaskEdit";
+import Login from "./pages/Login"; // <= Login sayfası
+
+import Sidebar from "./components/Sidebar";
+import headerLogo from "./assets/header-logo.png";
+
+import { connectWebSocket, disconnectWebSocket, initTaskWs } from "./ws/client";
+import { me, logout } from "./api/auth";
+import Register from "./pages/Register";
 
 const { Header, Content } = Layout;
 
-export default function App() {
-  const { token } = theme.useToken();
+/** Basit koruma: token yoksa /login */
+function ProtectedRoute({ children }: { children: JSX.Element }) {
+  const token = localStorage.getItem("token");
+  if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
+
+/** Korumalı shell: Sidebar + Header + Content; WS sadece burada bağlanır */
+function AppShell({ children }: { children: JSX.Element }) {
+  const { token: antToken } = theme.useToken();
   const [collapsed, setCollapsed] = useState(false);
 
-  // Uygulama ayağa kalkınca WS bağlan + topic init; unmount'ta kopar
+  const [currentUser, setCurrentUser] = useState<null | {
+    name: string;
+    surname: string;
+    email: string;
+  }>(null);
+
+  // Aynı kullanıcı için stabil arka plan rengi (avatar) üret
+  const colorFromString = (seed: string) => {
+    const str = seed || "user";
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      hash |= 0; // 32-bit
+    }
+    // 0-360 derece arası bir hue
+    const hue = Math.abs(hash) % 360;
+    // Ant tasarımına uygun, doygunluğu kısık ve açık bir ton
+    return `hsl(${hue} 70% 45%)`;
+  };
+
+  // Kullanıcı baş harfleri
+  const initials = (u: { name?: string; surname?: string; email?: string }) => {
+    const n = (u.name ?? "").trim();
+    const s = (u.surname ?? "").trim();
+    if (n || s) {
+      return `${n.charAt(0)}${s.charAt(0)}`.toUpperCase() || "U";
+    }
+    // name/surname yoksa email'in ilk harfi
+    return (u.email?.charAt(0) ?? "U").toUpperCase();
+  };
+
   useEffect(() => {
+    // sadece login'li kullanıcıdayken çağrılır (ProtectedRoute sayesinde)
     connectWebSocket();
     initTaskWs();
 
-    return () => {
-      disconnectWebSocket();
-    };
+    // Kullanıcı bilgisini al
+    (async () => {
+      try {
+        const data = await me();
+        setCurrentUser({
+          name: data.name,
+          surname: data.surname,
+          email: data.email,
+        });
+      } catch {
+        // Token bozuksa otomatik çıkış
+        logout();
+      }
+    })();
+
+    return () => disconnectWebSocket();
   }, []);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sidebar collapsed={collapsed} onCollapse={setCollapsed} />
-
       <Layout>
         <Header
           style={{
@@ -46,6 +102,7 @@ export default function App() {
             alignItems: "center",
             justifyContent: "center",
             height: 40,
+            position: "relative",
           }}
         >
           <div style={{ margin: `${collapsed ? 16 : 35}px 1px 1px` }}>
@@ -55,32 +112,246 @@ export default function App() {
               style={{ height: "300px", objectFit: "contain" }}
             />
           </div>
+
+          {/* Sağ üst kullanıcı kartı (daha belirgin) */}
+          <div
+            style={{
+              position: "absolute",
+              right: 16,
+              top: 0,
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {currentUser && (
+              <Dropdown
+                placement="bottomRight"
+                menu={{
+                  items: [
+                    {
+                      key: "email",
+                      disabled: true,
+                      label: (
+                        <div style={{ opacity: 0.85 }}>
+                          {currentUser.email}
+                        </div>
+                      ),
+                    },
+                    { type: "divider" },
+                    {
+                      key: "logout",
+                      label: "Logout",
+                      onClick: () => logout(),
+                    },
+                  ],
+                }}
+              >
+                <div
+                  style={{
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "4px 12px",
+                    borderRadius: 9999,
+                    background: antToken.colorFillTertiary,
+                    border: `1px solid ${antToken.colorBorderSecondary}`,
+                    boxShadow: `0 1px 0 ${antToken.colorSplit}`,
+                  }}
+                >
+                  <Tooltip title={`${currentUser.name} ${currentUser.surname}`}>
+                    <Avatar
+                      size={36}
+                      style={{
+                        backgroundColor: colorFromString(
+                          currentUser.email || currentUser.name || "user"
+                        ),
+                        color: "#fff",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {initials(currentUser)}
+                    </Avatar>
+                  </Tooltip>
+
+                  <div style={{ lineHeight: 1.1, display: "flex", flexDirection: "column" }}>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 15,
+                        letterSpacing: 0.2,
+                      }}
+                    >
+                      {currentUser.name} {currentUser.surname}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        opacity: 0.75,
+                      }}
+                    >
+                      {currentUser.email}
+                    </span>
+                  </div>
+                </div>
+              </Dropdown>
+            )}
+          </div>
         </Header>
 
-        <Content style={{ padding: 0, background: token.colorBgContainer }}>
+        <Content style={{ padding: 0, background: antToken.colorBgContainer }}>
           <style>{`
             .ant-menu-dark .ant-menu-item-selected {
               background-color: #3092B9 !important;
             }
           `}</style>
 
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/board" element={<Board />} />
-            <Route path="/tasks/new" element={<NewTask />} />
-            <Route path="/projects/new" element={<NewProject />} />
-            <Route path="/epics/new" element={<NewEpic />} />
-            <Route path="/users/new" element={<NewUser />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/epics" element={<Epics />} />
-            <Route path="/projects" element={<Projects />} />        
-            <Route path="/gantt" element={<TasksGantt />} />
-            <Route path="/tasks/:id/edit" element={<TaskEdit />} />
-          </Routes>
+          {children}
         </Content>
       </Layout>
     </Layout>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      {/* public */}
+      <Route path="/login" element={<Login />} />
+
+      {/* redirect */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      {/* protected */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <Dashboard />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tasks"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <Tasks />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/board"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <Board />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tasks/new"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <NewTask />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/projects/new"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <NewProject />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/epics/new"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <NewEpic />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users/new"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <NewUser />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <Users />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/epics"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <Epics />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/projects"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <Projects />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/gantt"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <TasksGantt />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tasks/:id/edit"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <TaskEdit />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* bilinmeyen route → dashboard'a */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
+     
+
+
+<Route path="/register" element={<Register />} />
+    </Routes>
   );
 }

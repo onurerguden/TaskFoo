@@ -70,7 +70,9 @@ public class TaskMapper {
                         u.getId(),
                         safe(u.getName()),
                         safe(u.getSurname()),
-                        u.getRole()
+                        safe(u.getEmail()),
+                        u.getRoles()
+
                 ))
                 .collect(Collectors.toList());
     }
