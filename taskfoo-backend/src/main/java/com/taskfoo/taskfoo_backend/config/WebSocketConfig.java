@@ -18,4 +18,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setApplicationDestinationPrefixes("/app");
         registry.enableSimpleBroker("/topic");
     }
+
+    //Add new socket for gantt chart & entegrate users to audits
 }
