@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Form, 
@@ -7,10 +7,7 @@ import {
   Card, 
   Typography, 
   message, 
-  Space,
-  Divider,
-  Checkbox,
-  theme
+  Divider
 } from "antd";
 import { 
   UserOutlined, 
@@ -22,42 +19,23 @@ import {
 } from "@ant-design/icons";
 import { login } from "../api/auth";
 
-const { Title, Text, Link } = Typography;
+const { Title, Text } = Typography;
 
 interface LoginFormValues {
   email: string;
   password: string;
-  remember?: boolean;
 }
 
 export default function Login() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const { token } = theme.useToken();
-
-  // Check for remembered credentials on mount
-  useEffect(() => {
-    const rememberedEmail = localStorage.getItem('taskfoo_remember_email');
-    if (rememberedEmail) {
-      form.setFieldsValue({ email: rememberedEmail, remember: true });
-      setRememberMe(true);
-    }
-  }, [form]);
 
   const handleFinish = async (values: LoginFormValues) => {
     setLoading(true);
     
     try {
       await login(values.email, values.password);
-      
-      // Handle remember me functionality
-      if (values.remember) {
-        localStorage.setItem('taskfoo_remember_email', values.email);
-      } else {
-        localStorage.removeItem('taskfoo_remember_email');
-      }
 
       message.success({
         content: "Welcome back! Redirecting to dashboard...",
@@ -149,7 +127,6 @@ export default function Login() {
           onFinish={handleFinish}
           size="large"
           requiredMark={false}
-          scrollToFirstError
         >
           <Form.Item
             name="email"
@@ -198,37 +175,6 @@ export default function Login() {
               }}
               onPressEnter={() => form.submit()}
             />
-          </Form.Item>
-
-          {/* Remember Me & Forgot Password */}
-          <Form.Item style={{ marginBottom: 24 }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 8
-            }}>
-              <Form.Item name="remember" valuePropName="checked" noStyle>
-                <Checkbox
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ fontSize: 14, color: '#6b7280' }}
-                >
-                  Remember me
-                </Checkbox>
-              </Form.Item>
-              <Link 
-                style={{ 
-                  fontSize: 14, 
-                  color: '#3092B9',
-                  textDecoration: 'none'
-                }}
-                href="#"
-              >
-                Forgot password?
-              </Link>
-            </div>
           </Form.Item>
 
           {/* Login Button */}
