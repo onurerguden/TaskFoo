@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useEffect, useState, type JSX } from "react";
-import { Layout, theme, Dropdown, Avatar, Space, Tooltip } from "antd";
+import { Layout, theme, Dropdown, Avatar, Tooltip, Tag } from "antd";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
@@ -42,6 +42,7 @@ function AppShell({ children }: { children: JSX.Element }) {
     name: string;
     surname: string;
     email: string;
+    roles: string[];
   }>(null);
 
   // Aynı kullanıcı için stabil arka plan rengi (avatar) üret
@@ -78,10 +79,19 @@ function AppShell({ children }: { children: JSX.Element }) {
     (async () => {
       try {
         const data = await me();
+        // roles alanını backend’den gelebilecek birkaç olası formata göre normalize et
+        const roles: string[] = Array.isArray((data as any).roles)
+          ? (data as any).roles
+          : Array.isArray((data as any).roleList)
+          ? (data as any).roleList
+          : Array.isArray((data as any).authorities)
+          ? (data as any).authorities.map((a: any) => a?.authority ?? String(a))
+          : [];
         setCurrentUser({
           name: data.name,
           surname: data.surname,
           email: data.email,
+          roles,
         });
       } catch {
         // Token bozuksa otomatik çıkış
@@ -135,6 +145,21 @@ function AppShell({ children }: { children: JSX.Element }) {
                       disabled: true,
                       label: <div style={{ opacity: 0.85 }}>{currentUser.email}</div>,
                     },
+                    {
+                      key: "roles",
+                      disabled: true,
+                      label: (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {currentUser.roles?.length
+                            ? currentUser.roles.map((r) => (
+                                <Tag key={r} color="blue">
+                                  {r}
+                                </Tag>
+                              ))
+                            : <span style={{ opacity: 0.6 }}>No roles</span>}
+                        </div>
+                      ),
+                    },
                     { type: "divider" },
                     {
                       key: "logout",
@@ -161,7 +186,11 @@ function AppShell({ children }: { children: JSX.Element }) {
                   }}
                 >
                   <div style={{ position: "relative", lineHeight: 0 }}>
-                    <Tooltip title={`${currentUser.name} ${currentUser.surname}`}>
+                    <Tooltip
+                      title={`${currentUser.name} ${currentUser.surname}${
+                        currentUser.roles?.length ? " • " + currentUser.roles.join(", ") : ""
+                      }`}
+                    >
                       <Avatar
                         size={36}
                         style={{
@@ -209,6 +238,7 @@ function AppShell({ children }: { children: JSX.Element }) {
                     >
                       {currentUser.email}
                     </span>
+                    {/* Roller burada direkt görünmeyecek */}
                   </div>
                 </div>
               </Dropdown>
@@ -365,7 +395,6 @@ export default function App() {
       <Route path="*" element={<Navigate to="/board" replace />} />
 
      
-
 
 <Route path="/register" element={<Register />} />
     </Routes>
