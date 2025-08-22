@@ -10,7 +10,7 @@ const { Text } = Typography;
 
 type FormValues = {
   name: string;
-  surname?: string;
+  surname: string;
   email: string;
   password: string;
 };
@@ -160,6 +160,7 @@ export default function NewUser() {
                 <Form.Item
                   name="surname"
                   label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Surname</Text>}
+                  rules={[{ required: true, message: "Surname is required" }]}
                 >
                   <Input placeholder="e.g. Ergüden" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
                 </Form.Item>
