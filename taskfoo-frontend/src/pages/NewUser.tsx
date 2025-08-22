@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Form, Input, Button, Card, Typography, Row, Col, Space, Modal, Divider, message as antdMessage } from "antd";
+import { Form, Input, Button, Card, Typography, Row, Col, Space, Modal, Divider, Select, message as antdMessage } from "antd";
 import { useNavigate } from "react-router-dom";
 import { createUser } from "../api/users";
 import { SaveOutlined, CloseOutlined, UserOutlined, CheckOutlined, CheckCircleTwoTone } from "@ant-design/icons";
@@ -8,10 +8,14 @@ import { useState, useRef, useEffect } from "react";
 
 const { Text } = Typography;
 
+const ROLE_OPTIONS = ["ADMIN", "PM", "DEV", "SPEC", "ANAL"];
+
 type FormValues = {
   name: string;
   surname?: string;
-  role?: string;
+  email: string;
+  password: string;
+  roles: string[]; // e.g. ["ADMIN"]
 };
 
 export default function NewUser() {
@@ -25,12 +29,19 @@ export default function NewUser() {
 
   const [resultOpen, setResultOpen] = useState(false);
   const [countdown, setCountdown] = useState(8);
-  const [createdUser, setCreatedUser] = useState<{ id?: number; name: string; surname?: string; role?: string } | null>(null);
+  const [createdUser, setCreatedUser] = useState<{ id?: number; name: string; surname?: string; email?: string; roles?: string[] } | null>(null);
 
   const mut = useMutation({
     mutationFn: async (v: FormValues) => {
-      const res = await createUser({ name: v.name, surname: v.surname, role: v.role });
-      return res; // assume API returns created user object
+      const payload = {
+        name: v.name,
+        surname: v.surname,
+        email: v.email,
+        password: v.password,
+        roles: v.roles
+      };
+      const res = await createUser(payload);
+      return res;
     },
     retry: false,
     onMutate: async () => {
@@ -120,7 +131,14 @@ export default function NewUser() {
       <PageHeaderIcon title="Create New User" />
       {/* Content */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-        <Form form={form} layout="vertical" onFinish={handleFinish} onFinishFailed={onFinishFailed} disabled={loading}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleFinish}
+          onFinishFailed={onFinishFailed}
+          disabled={loading}
+          initialValues={{ roles: [] }}
+        >
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={16}>
               <Card
@@ -136,16 +154,56 @@ export default function NewUser() {
                   body: { padding: 24 },
                 }}
               >
-                <Form.Item name="name" label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Name</Text>} rules={[{ required: true, message: "Name is required" }]}>
+                <Form.Item
+                  name="name"
+                  label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Name</Text>}
+                  rules={[{ required: true, message: "Name is required" }]}
+                >
                   <Input placeholder="e.g. Onur" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
                 </Form.Item>
 
-                <Form.Item name="surname" label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Surname</Text>}>
+                <Form.Item
+                  name="surname"
+                  label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Surname</Text>}
+                >
                   <Input placeholder="e.g. Ergüden" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
                 </Form.Item>
 
-                <Form.Item name="role" label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Role</Text>}>
-                  <Input placeholder="e.g. Software Engineer" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
+                <Form.Item
+                  name="email"
+                  label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Email</Text>}
+                  rules={[
+                    { required: true, message: "Email is required" },
+                    { type: "email", message: "Please enter a valid email" }
+                  ]}
+                >
+                  <Input placeholder="e.g. onur@test.com" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
+                </Form.Item>
+
+                <Form.Item
+                  name="password"
+                  label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Password</Text>}
+                  rules={[
+                    { required: true, message: "Password is required" },
+                    { min: 6, message: "At least 6 characters" }
+                  ]}
+                  hasFeedback
+                >
+                  <Input.Password placeholder="Create a password" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
+                </Form.Item>
+
+                <Form.Item
+                  name="roles"
+                  label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Roles</Text>}
+                  rules={[{ required: true, message: "Select at least one role" }]}
+                >
+                  <Select
+                    mode="multiple"
+                    placeholder="Select role(s)"
+                    size="large"
+                    options={ROLE_OPTIONS.map(r => ({ label: r, value: r }))}
+                    style={{ borderRadius: 6 }}
+                  />
                 </Form.Item>
               </Card>
             </Col>
@@ -205,8 +263,16 @@ export default function NewUser() {
           { (createdUser?.surname || form.getFieldValue("surname")) && (
             <div><Text strong>Surname:</Text> <Text style={{ fontSize: 16 }}>{createdUser?.surname ?? form.getFieldValue("surname")}</Text></div>
           )}
-          { (createdUser?.role || form.getFieldValue("role")) && (
-            <div><Text strong>Role:</Text> <Text style={{ fontSize: 16 }}>{createdUser?.role ?? form.getFieldValue("role")}</Text></div>
+          { (createdUser?.email || form.getFieldValue("email")) && (
+            <div><Text strong>Email:</Text> <Text style={{ fontSize: 16 }}>{createdUser?.email ?? form.getFieldValue("email")}</Text></div>
+          )}
+          { ((createdUser?.roles?.length ?? 0) > 0 || (form.getFieldValue("roles")?.length ?? 0) > 0) && (
+            <div>
+              <Text strong>Roles:</Text>{" "}
+              <Text style={{ fontSize: 16 }}>
+                {(createdUser?.roles ?? form.getFieldValue("roles") ?? []).join(", ")}
+              </Text>
+            </div>
           )}
         </div>
         <Divider style={{ margin: "12px 0" }} />

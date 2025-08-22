@@ -39,7 +39,8 @@ type UserRow = {
   id: number;
   name?: string;
   surname?: string;
-  role?: string;
+  email?: string;
+  roles: string[];
 };
 
 export default function Users() {
@@ -96,10 +97,11 @@ export default function Users() {
         const name = visibleName(u).toLowerCase();
         if (!name.includes(s)) return false;
       }
-      // role filter
+      // roles filter (user must have at least one of the selected roles)
       if (roleSet.size > 0) {
-        const role = (u.role || "").toLowerCase();
-        if (!role || !roleSet.has(role)) return false;
+        const roles = Array.isArray(u.roles) ? u.roles : [];
+        const hasAny = roles.some((r) => roleSet.has((r || "").toLowerCase()));
+        if (!hasAny) return false;
       }
       // project filter: user must have at least one task in selected projects
       if ((filters.projectIds?.length ?? 0) > 0) {
@@ -127,7 +129,7 @@ export default function Users() {
   const roleOptions = useMemo(() => {
     const set = new Set<string>();
     (users as UserRow[]).forEach((u) => {
-      if (u.role) set.add(u.role);
+      (u.roles || []).forEach((r) => set.add(r));
     });
     return Array.from(set).map((r) => ({ value: r, label: r }));
   }, [users]);
@@ -147,7 +149,7 @@ export default function Users() {
     () => [
       {
         title: "User Name",
-        width: 440,
+        width: 480,
         render: (_: any, r: UserRow) => {
           const displayName = visibleName(r);
           const initials = initialsFrom(displayName || `User ${r.id}`);
@@ -158,7 +160,16 @@ export default function Users() {
               </Tooltip>
               <div>
                 <Text strong>{displayName || `User ${r.id}`}</Text>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>{r.role || "-"}</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                  {(r.roles && r.roles.length > 0)
+                    ? r.roles.map((rr) => (
+                        <Tag key={rr} color="blue" style={{ borderRadius: 6, marginInlineEnd: 0 }}>
+                          {rr}
+                        </Tag>
+                      ))
+                    : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
+                  }
+                </div>
               </div>
             </Space>
           );
