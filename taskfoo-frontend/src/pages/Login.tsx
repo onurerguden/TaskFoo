@@ -289,7 +289,7 @@ export default function Auth() {
   };
   const rowStyle: React.CSSProperties = {
     width: "100%",
-    maxWidth: 1000,
+    maxWidth: 2000,
     display: "flex",
     gap: 0,
     alignItems: "stretch",
@@ -409,7 +409,7 @@ export default function Auth() {
   const sideImgStyle: React.CSSProperties = {
     width: "100%",
     height: "100%",
-    objectFit: "fill",
+    objectFit: "contain",
     display: "block",
     transform: "scale(1.0)",
   };
