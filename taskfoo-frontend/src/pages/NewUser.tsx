@@ -1,32 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Form, Input, Button, Card, Typography, Row, Col, Space, Modal, Divider, Select, message as antdMessage } from "antd";
+import { Form, Input, Button, Card, Typography, Row, Col, Space, Modal, Divider, message as antdMessage } from "antd";
 import { useNavigate } from "react-router-dom";
-import { createUser } from "../api/users";
+import { register } from "../api/auth";
 import { SaveOutlined, CloseOutlined, UserOutlined, CheckOutlined, CheckCircleTwoTone } from "@ant-design/icons";
 import PageHeaderIcon from "../components/PageHeaderIcon";
 import { useState, useRef, useEffect } from "react";
 
 const { Text } = Typography;
 
-const ROLE_LABELS: Record<string, string> = {
-  ADMIN: "Admin",
-  PM: "Project Manager",
-  DEV: "Developer",
-  SPEC: "Specialist",
-  ANAL: "Analyst",
-};
-
-const ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(([value, label]) => ({
-  value,
-  label,
-}));
-
 type FormValues = {
   name: string;
   surname?: string;
   email: string;
   password: string;
-  roles: string[]; // e.g. ["ADMIN"]
 };
 
 export default function NewUser() {
@@ -40,7 +26,7 @@ export default function NewUser() {
 
   const [resultOpen, setResultOpen] = useState(false);
   const [countdown, setCountdown] = useState(8);
-  const [createdUser, setCreatedUser] = useState<{ id?: number; name: string; surname?: string; email?: string; roles?: string[] } | null>(null);
+  const [createdUser, setCreatedUser] = useState<{ id?: number; name: string; surname?: string; email?: string } | null>(null);
 
   const mut = useMutation({
     mutationFn: async (v: FormValues) => {
@@ -49,9 +35,8 @@ export default function NewUser() {
         surname: v.surname,
         email: v.email,
         password: v.password,
-        roles: v.roles
       };
-      const res = await createUser(payload);
+      const res = await register(payload);
       return res;
     },
     retry: false,
@@ -148,7 +133,6 @@ export default function NewUser() {
           onFinish={handleFinish}
           onFinishFailed={onFinishFailed}
           disabled={loading}
-          initialValues={{ roles: [] }}
         >
           <Row gutter={[24, 24]}>
             <Col xs={24} lg={16}>
@@ -201,21 +185,6 @@ export default function NewUser() {
                   hasFeedback
                 >
                   <Input.Password placeholder="Create a password" size="large" style={{ borderColor: "#d1d5db", borderRadius: 6 }} />
-                </Form.Item>
-
-                <Form.Item
-                  name="roles"
-                  label={<Text strong style={{ color: "#374151", fontSize: 16 }}>Roles</Text>}
-                  rules={[{ required: true, message: "Select at least one role" }]}
-                >
-                  <Select
-                    mode="multiple"
-                    placeholder="Select role(s)"
-                    size="large"
-                    options={ROLE_OPTIONS}
-                    optionFilterProp="label"
-                    style={{ borderRadius: 6 }}
-                  />
                 </Form.Item>
               </Card>
             </Col>
@@ -277,14 +246,6 @@ export default function NewUser() {
           )}
           { (createdUser?.email || form.getFieldValue("email")) && (
             <div><Text strong>Email:</Text> <Text style={{ fontSize: 16 }}>{createdUser?.email ?? form.getFieldValue("email")}</Text></div>
-          )}
-          { ((createdUser?.roles?.length ?? 0) > 0 || (form.getFieldValue("roles")?.length ?? 0) > 0) && (
-            <div>
-              <Text strong>Roles:</Text>{" "}
-              <Text style={{ fontSize: 16 }}>
-                {(createdUser?.roles ?? form.getFieldValue("roles") ?? []).map((r: string) => ROLE_LABELS[r] ?? r).join(", ")}
-              </Text>
-            </div>
           )}
         </div>
         <Divider style={{ margin: "12px 0" }} />
