@@ -124,7 +124,7 @@ export default function Auth() {
         clearFadeTimer();
         setTurtlesOn(true);
         requestAnimationFrame(() => setTurtlesVisible(true));
-      }, 5000); // 5 seconds
+      }, 3000); // 5 seconds
     };
 
     const onActivity = () => {
