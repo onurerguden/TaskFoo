@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Form, 
@@ -18,6 +18,7 @@ import {
   UserAddOutlined
 } from "@ant-design/icons";
 import headerLogo from "../assets/header-logo.png";
+import sideArt from "../assets/login-side.png"; // <-- NEW: left visual
 import { login } from "../api/auth";
 
 const { Title, Text } = Typography;
@@ -31,6 +32,38 @@ export default function Login() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [sideSize, setSideSize] = useState<number | undefined>(undefined);
+  const [sideWidth, setSideWidth] = useState<number>(0);     // animated width of the left square
+  const [phase, setPhase] = useState<0 | 1 | 2>(0);          // 0: only card, 1: card nudges right, 2: left square expands
+
+  // measure the card height to sync the square visual
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (wrapperRef.current) {
+        setSideSize(wrapperRef.current.offsetHeight);
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  // Animation sequence: 0 -> 1 (card moves right) -> 2 (left promo expands)
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 120);              // nudge card to the right
+    const t2 = setTimeout(() => setPhase(2), 420);              // then expand promo
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  // When entering phase 2, animate the left square width from 0 to measured height
+  useEffect(() => {
+    if (phase === 2 && sideSize) {
+      // start from 0 -> sideSize
+      requestAnimationFrame(() => setSideWidth(sideSize));
+    }
+  }, [phase, sideSize]);
 
   const handleFinish = async (values: LoginFormValues) => {
     setLoading(true);
@@ -78,6 +111,15 @@ export default function Login() {
     padding: '20px'
   };
 
+  const rowStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: 1000,
+    display: 'flex',
+    gap: 0,
+    alignItems: 'stretch',
+    justifyContent: 'center'
+  };
+
   const headerStyle: React.CSSProperties = {
     textAlign: 'center',
     marginBottom: 32,
@@ -105,7 +147,9 @@ export default function Login() {
   borderRadius: 16,            // tüm kart için yuvarlak kenar
   boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
   overflow: 'hidden',          // şapkanın üst köşe yuvarlakları görünür
-  background: '#ffffff'
+  background: '#ffffff',
+  borderTopLeftRadius: 0,
+  borderBottomLeftRadius: 0,
 };
 
 const capStyle: React.CSSProperties = {
@@ -114,45 +158,84 @@ const capStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  borderTopLeftRadius: 16,     // üst köşeleri burada da ver
+  borderTopLeftRadius: 0,     // üst köşeleri burada da ver
   borderTopRightRadius: 16,
   position: 'relative'
 };
 
 const cardStyle: React.CSSProperties = {
   width: '100%',
-  borderBottomLeftRadius: 16,
+  borderBottomLeftRadius: 0,
   borderBottomRightRadius: 16,
   borderTopLeftRadius: 0,      // şapkanın altına düz otursun
   borderTopRightRadius: 0,
   border: '1px solid #f0f0f0',
   borderTop: 'none',           // üstte beyaz çizgi görünmesin
-  background: '#ffffff'
+  background: '#ffffff',
+  borderLeft: 'none'
 };
   
+  const sideStyle: React.CSSProperties = {
+    height: sideSize,          // matches card height
+    width: sideWidth,          // animated width
+    borderRadius: 16,
+    overflow: 'hidden',
+    background: '#062B43',
+    border: '1px solid #0b3a57',
+    boxShadow: '0 10px 40px rgba(0,0,0,0.08)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+    borderRight: 'none',
+    opacity: sideWidth > 0 ? 1 : 0,
+    transform: sideWidth > 0 ? 'translateX(0)' : 'translateX(16px)',
+    transition: 'width 480ms cubic-bezier(0.4,0,0.2,1), opacity 300ms ease, transform 300ms ease',
+    willChange: 'width, transform, opacity'
+  };
 
+  const sideImgStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'fill',
+    display: 'block',
+    transform: 'scale(1.0)'
+  };
 
   
 
   return (
     <>
       <div style={containerStyle}>
-        <div style={wrapperStyle}>
-          <div style={capStyle}>
-            <div style={capStyle}>
-  <img
-    src={headerLogo}
-    alt="Taskfoo Logo"
-    style={{
-      height: 356,             // istediğin gibi kalsın; parent 88px olduğu için contain ile sığar
-      objectFit: 'contain',
-      transform: 'translateY(22px)'  // merkezin biraz altı
-    }}
-  />
-</div>
+        <div style={rowStyle}>
+          {/* Left promo square (initially collapsed) */}
+          <div className="auth-side" style={sideStyle}>
+            <img src={sideArt} alt="Taskfoo promo" style={sideImgStyle} />
           </div>
-          
-          <Card style={cardStyle} bordered={false}>
+
+          {/* Right: the actual login card; nudge right on phase 1+ */}
+          <div
+            ref={wrapperRef}
+            style={{
+              ...wrapperStyle,
+              transform: phase >= 1 ? 'translateX(16px)' : 'translateX(0)',
+              transition: 'transform 320ms cubic-bezier(0.4,0,0.2,1)'
+            }}
+          >
+            <div style={capStyle}>
+              <img
+                src={headerLogo}
+                alt="Taskfoo Logo"
+                style={{
+                  height: 356,
+                  objectFit: 'contain',
+                  transform: 'translateY(22px)'
+                }}
+              />
+            </div>
+
+            <Card style={cardStyle} bordered={false}>
           {/* Header Section */}
           <div style={headerStyle}>
             <Title level={2} style={titleStyle}>
@@ -283,7 +366,15 @@ const cardStyle: React.CSSProperties = {
             </Text>
           </div>
           </Card>
+          </div>
         </div>
+        <style>
+          {`
+            @media (max-width: 900px) {
+              .auth-side { display: none; }
+            }
+          `}
+        </style>
       </div>
     </>
   );
