@@ -107,7 +107,8 @@ export default function Login() {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+    position: 'relative',
+    overflow: 'hidden',
     padding: '20px'
   };
 
@@ -117,7 +118,9 @@ export default function Login() {
     display: 'flex',
     gap: 0,
     alignItems: 'stretch',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    position: 'relative',
+    zIndex: 1
   };
 
   const headerStyle: React.CSSProperties = {
@@ -207,7 +210,14 @@ const cardStyle: React.CSSProperties = {
 
   return (
     <>
-      <div style={containerStyle}>
+      <div className="login-bg" style={containerStyle}>
+          {/* Animated background blobs (more, faster) */}
+          <div className="bg-blob blob1" />
+          <div className="bg-blob blob2" />
+          <div className="bg-blob blob3" />
+          <div className="bg-blob blob4" />
+          <div className="bg-blob blob5" />
+          <div className="bg-blob blob6" />
         <div style={rowStyle}>
           {/* Left promo square (initially collapsed) */}
           <div className="auth-side" style={sideStyle}>
@@ -370,8 +380,111 @@ const cardStyle: React.CSSProperties = {
         </div>
         <style>
           {`
+            .login-bg {
+              min-height: 100vh;
+              background:
+                radial-gradient(1200px 800px at 10% 10%, rgba(48,146,185,0.28), transparent 60%),
+                radial-gradient(900px 700px at 90% 20%, rgba(15,76,129,0.22), transparent 60%),
+                radial-gradient(1000px 900px at 50% 100%, rgba(39,120,198,0.25), transparent 60%),
+                /* base gradient: cycles blue ↔ white with a pause on blue */
+                linear-gradient(135deg, #0E6BA8, #2FA4FF, #FFFFFF, #2FA4FF, #0E6BA8);
+              background-size: 100% 100%, 100% 100%, 100% 100%, 600% 600%;
+              background-blend-mode: screen, screen, screen, normal;
+              animation: gradientDrift 4s ease-in-out infinite alternate;
+            }
+
+            /* Floating color blobs (dance-like motion) */
+            .bg-blob {
+              position: absolute;
+              width: 38vmax;
+              height: 38vmax;
+              border-radius: 50%;
+              filter: blur(46px);
+              opacity: 0.55;
+              mix-blend-mode: screen;
+              pointer-events: none;
+            }
+
+            .bg-blob.blob1 {
+              top: -15%;
+              left: -10%;
+              background: radial-gradient(circle at 30% 30%, #2FA4FF 0%, rgba(47,164,255,0.7) 35%, rgba(47,164,255,0) 70%);
+              animation: blobFloat1 6s ease-in-out infinite alternate;
+            }
+            .bg-blob.blob2 {
+              bottom: -20%;
+              right: -15%;
+              background: radial-gradient(circle at 60% 40%, #73C2FB 0%, rgba(115,194,251,0.7) 35%, rgba(115,194,251,0) 70%);
+              animation: blobFloat2 7s ease-in-out infinite alternate;
+            }
+            .bg-blob.blob3 {
+              top: 25%;
+              right: 20%;
+              background: radial-gradient(circle at 50% 50%, #0E6BA8 0%, rgba(14,107,168,0.7) 35%, rgba(14,107,168,0) 70%);
+              animation: blobFloat3 8s ease-in-out infinite alternate;
+            }
+            /* New blobs: add light/white energy for blue→white pops */
+            .bg-blob.blob4 {
+              top: 10%;
+              right: -5%;
+              background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.65) 35%, rgba(255,255,255,0) 70%);
+              animation: blobFloat4 6.5s ease-in-out infinite alternate;
+            }
+            .bg-blob.blob5 {
+              bottom: 5%;
+              left: 15%;
+              background: radial-gradient(circle at 40% 40%, #A7D8FF 0%, rgba(167,216,255,0.7) 35%, rgba(167,216,255,0) 70%);
+              animation: blobFloat5 7.5s ease-in-out infinite alternate;
+            }
+            .bg-blob.blob6 {
+              top: 45%;
+              left: 55%;
+              background: radial-gradient(circle at 60% 60%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 35%, rgba(255,255,255,0) 70%);
+              animation: blobFloat6 5.5s ease-in-out infinite alternate;
+            }
+
+            /* Faster, with a hold on blue (45%–60%) */
+            @keyframes gradientDrift {
+              0%   { background-position: 0% 50%, 100% 50%, 50% 100%, 0% 50%; }
+              45%  { background-position: 40% 10%, 60% 90%, 10% 60%, 40% 50%; }
+              60%  { background-position: 40% 10%, 60% 90%, 10% 60%, 60% 50%; }
+              100% { background-position: 100% 50%, 0% 50%, 50% 0%, 100% 50%; }
+            }
+
+            @keyframes blobFloat1 {
+              0%   { transform: translate(0, 0) scale(0.98); }
+              50%  { transform: translate(10%, -8%) scale(1.08); }
+              100% { transform: translate(18%, 6%) scale(1.0); }
+            }
+            @keyframes blobFloat2 {
+              0%   { transform: translate(0, 0) scale(1); }
+              50%  { transform: translate(-12%, 6%) scale(1.06) rotate(6deg); }
+              100% { transform: translate(-20%, -8%) scale(1); }
+            }
+            @keyframes blobFloat3 {
+              0%   { transform: translate(0, 0) scale(0.94); }
+              50%  { transform: translate(-8%, 12%) scale(1.05); }
+              100% { transform: translate(8%, -10%) scale(0.97); }
+            }
+            @keyframes blobFloat4 {
+              0%   { transform: translate(0, 0) scale(0.9); }
+              50%  { transform: translate(-6%, -6%) scale(1.08); }
+              100% { transform: translate(4%, 8%) scale(1.0); }
+            }
+            @keyframes blobFloat5 {
+              0%   { transform: translate(0, 0) scale(1); }
+              50%  { transform: translate(10%, -6%) scale(1.07) rotate(-4deg); }
+              100% { transform: translate(16%, 6%) scale(1); }
+            }
+            @keyframes blobFloat6 {
+              0%   { transform: translate(0, 0) scale(0.96); }
+              50%  { transform: translate(-10%, 4%) scale(1.04); }
+              100% { transform: translate(6%, -6%) scale(0.98); }
+            }
+
             @media (max-width: 900px) {
               .auth-side { display: none; }
+              .bg-blob { display: none; }
             }
           `}
         </style>
