@@ -8,7 +8,18 @@ import { useState, useRef, useEffect } from "react";
 
 const { Text } = Typography;
 
-const ROLE_OPTIONS = ["ADMIN", "PM", "DEV", "SPEC", "ANAL"];
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  PM: "Project Manager",
+  DEV: "Developer",
+  SPEC: "Specialist",
+  ANAL: "Analyst",
+};
+
+const ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
 
 type FormValues = {
   name: string;
@@ -201,7 +212,8 @@ export default function NewUser() {
                     mode="multiple"
                     placeholder="Select role(s)"
                     size="large"
-                    options={ROLE_OPTIONS.map(r => ({ label: r, value: r }))}
+                    options={ROLE_OPTIONS}
+                    optionFilterProp="label"
                     style={{ borderRadius: 6 }}
                   />
                 </Form.Item>
@@ -270,7 +282,7 @@ export default function NewUser() {
             <div>
               <Text strong>Roles:</Text>{" "}
               <Text style={{ fontSize: 16 }}>
-                {(createdUser?.roles ?? form.getFieldValue("roles") ?? []).join(", ")}
+                {(createdUser?.roles ?? form.getFieldValue("roles") ?? []).map((r: string) => ROLE_LABELS[r] ?? r).join(", ")}
               </Text>
             </div>
           )}
