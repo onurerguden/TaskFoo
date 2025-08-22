@@ -1,5 +1,5 @@
 /* src/pages/Users.tsx */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Table, Typography, Alert, Avatar, Space, Button, Popconfirm, App, Tag, Card, Input, Select, Tooltip, Modal, Grid } from "antd";
 import { DeleteOutlined, EyeOutlined } from "@ant-design/icons";
@@ -26,6 +26,17 @@ const initialsFrom = (full: string) => {
 };
 
 const colorForId = (id: number) => `hsl(${(id * 137.508) % 360}deg, 65%, 45%)`;
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  PM: "Project Manager",
+  DEV: "Developer",
+  SPEC: "QA / Specialist",
+  ANAL: "Analyst",
+};
+
+const roleToLabel = (r?: string) => ROLE_LABELS[r ?? ""] ?? (r ?? "");
+const ALL_ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }));
 
 type FilterState = {
   search: string;
@@ -54,6 +65,10 @@ export default function Users() {
     roles: [],
     projectIds: [],
   });
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
   // users
   const { data: users = [], isLoading, isError, error } = useQuery<UserRow[]>({
@@ -86,6 +101,20 @@ export default function Users() {
       message.success("User deleted");
     },
     onError: (e: any) => message.error(e?.response?.data?.message ?? "Delete failed"),
+  });
+
+  const updateRoles = useMutation({
+    mutationFn: async (vars: { id: number; roles: string[] }) => {
+      // Backend expects: { roles: ["ADMIN", "PM"] }
+      return api.put(`/api/users/${vars.id}/roles`, { roles: vars.roles });
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["users"] });
+      message.success("Roles updated successfully!");
+    },
+    onError: (e: any) => {
+      message.error(e?.response?.data?.message ?? "Failed to update roles");
+    },
   });
 
   const filteredUsers = useMemo(() => {
@@ -131,7 +160,9 @@ export default function Users() {
     (users as UserRow[]).forEach((u) => {
       (u.roles || []).forEach((r) => set.add(r));
     });
-    return Array.from(set).map((r) => ({ value: r, label: r }));
+    // ensure we always have the known roles even if not present yet
+    Object.keys(ROLE_LABELS).forEach((k) => set.add(k));
+    return Array.from(set).map((r) => ({ value: r, label: roleToLabel(r) }));
   }, [users]);
 
   const getAssignedCount = (userId: number) => {
@@ -164,7 +195,7 @@ export default function Users() {
                   {(r.roles && r.roles.length > 0)
                     ? r.roles.map((rr) => (
                         <Tag key={rr} color="blue" style={{ borderRadius: 6, marginInlineEnd: 0 }}>
-                          {rr}
+                          {roleToLabel(rr)}
                         </Tag>
                       ))
                     : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
@@ -200,6 +231,16 @@ export default function Users() {
               <Button icon={<EyeOutlined />} size={compact ? "small" : "middle"} onClick={() => nav(`/tasks?assignee=${r.id}`)}>
                 {compact ? null : "View tasks"}
               </Button>
+              <Button
+                onClick={() => {
+                  setEditingUser(r);
+                  setSelectedRoles(Array.isArray(r.roles) ? r.roles : []);
+                  setEditOpen(true);
+                }}
+                size={compact ? "small" : "middle"}
+              >
+                {compact ? "Edit" : "Edit roles"}
+              </Button>
               <Popconfirm
                 title="Delete this user?"
                 okText="Delete"
@@ -231,6 +272,16 @@ export default function Users() {
     ],
     [tasks, del, nav, screens]
   );
+
+  const handleRolesOk = useCallback(() => {
+    if (!editingUser?.id) return;
+    const id = editingUser.id;
+    const roles = selectedRoles ?? [];
+    // Close immediately; update optimistically in background
+    setEditOpen(false);
+    setEditingUser(null);
+    updateRoles.mutate({ id, roles });
+  }, [editingUser, selectedRoles, updateRoles]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
@@ -308,6 +359,31 @@ export default function Users() {
           />
         </Card>
       </div>
+
+      <Modal
+        open={editOpen}
+        title={editingUser ? `Assign roles — ${visibleName(editingUser)}` : "Assign roles"}
+        onCancel={() => { setEditOpen(false); setEditingUser(null); }}
+        onOk={handleRolesOk}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: "100%" }}>
+          <Text type="secondary">Pick one or more roles for this user.</Text>
+          <Select
+            mode="multiple"
+            placeholder="Select role(s)"
+            value={selectedRoles}
+            onChange={(vals) => setSelectedRoles(vals as string[])}
+            options={ALL_ROLE_OPTIONS}
+            optionLabelProp="label"
+            style={{ width: "100%" }}
+            maxTagCount="responsive"
+          />
+          <div style={{ color: "#6b7280", fontSize: 12 }}>
+            Friendly labels are shown; API receives enum values (e.g., ADMIN, PM).
+          </div>
+        </Space>
+      </Modal>
 
       <style>{`
         .users-card .ant-table,

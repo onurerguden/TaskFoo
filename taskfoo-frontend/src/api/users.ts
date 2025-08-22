@@ -8,6 +8,12 @@ export type CreateUserBody = {
   role?: string;
 };
 
+export async function updateUserRoles(userId: number, roles: string[]) {
+  // roles: ["ADMIN","PM"] vb.
+  const res = await api.put(`/api/users/${userId}/roles`, { roles });
+  return res.data;
+}
+
 export const createUser = async (b: CreateUserBody) =>
   (await api.post("/api/users", b)).data;
 

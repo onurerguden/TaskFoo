@@ -1,9 +1,11 @@
 // src/main/java/com/taskfoo/taskfoo_backend/controller/UserController.java
 package com.taskfoo.taskfoo_backend.controller;
 
+import com.taskfoo.taskfoo_backend.dto.request.UpdateUserRolesRequest;
 import com.taskfoo.taskfoo_backend.dto.response.common.UserBriefDto;
 import com.taskfoo.taskfoo_backend.model.User;
 import com.taskfoo.taskfoo_backend.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,5 +29,14 @@ public class UserController {
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
+    }
+
+
+    @PutMapping("/{id}/roles")
+    public UserBriefDto updateUserRoles(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserRolesRequest req
+    ) {
+        return userService.updateUserRoles(id, req.getRoles());
     }
 }
