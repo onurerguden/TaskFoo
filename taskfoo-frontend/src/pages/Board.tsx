@@ -1086,7 +1086,7 @@ const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery
     },
   });
 
-  const assignUsersMutation = useMutation({
+const assignUsersMutation = useMutation({
     mutationFn: async ({ taskId, userIds, version }: { taskId: number; userIds: number[]; version: number }) => {
       return await assignUsers(taskId, userIds, version);
     },
@@ -1096,7 +1096,7 @@ const { data: rawTasks = [], isLoading: tkLoading, error: taskError } = useQuery
       setAssigningTask(null);
     },
     onError: (err: any) => {
-      message.error(err?.response?.data?.message || "Failed to assign users");
+      message.error(err?.response?.data?.message || err?.message || "Failed to assign users");
     },
   });
 
@@ -1142,10 +1142,11 @@ const handleOpenAssign = (task: TaskWithMetadata) => {
 
 const handleAssignConfirm = () => {
   if (!assigningTask) return;
+  const userIdsNum = (assignUserIds || []).map((v) => Number(v)).filter((v) => !Number.isNaN(v));
   assignUsersMutation.mutate({
-    taskId: assigningTask.id,
-    userIds: assignUserIds,
-    version: assigningTask.version,
+    taskId: Number(assigningTask.id),
+    userIds: userIdsNum,
+    version: typeof assigningTask.version === 'number' ? assigningTask.version : 0,
   });
 };
 
@@ -1330,12 +1331,12 @@ const handleDeleteConfirm = () => {
     <Select
       mode="multiple"
       value={assignUserIds}
-      onChange={(vals) => setAssignUserIds(vals as number[])}
+      onChange={(vals) => setAssignUserIds((vals as (number | string)[]).map((v) => Number(v)))}
       style={{ width: "100%" }}
       placeholder="Choose users"
       maxTagCount="responsive"
       options={users.map((u: any) => ({
-        value: u.id,
+        value: Number(u.id),
         label: (
           <Space>
             <Avatar size="small" style={{ background: `hsl(${u.id * 137.508}deg, 65%, 45%)` }}>

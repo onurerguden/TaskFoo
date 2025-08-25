@@ -147,21 +147,30 @@ public class TaskService {
         return saved;
     }
 
-    /** ASSIGNEES REPLACE */
+    // TaskService.java
+
     @Transactional
-    public Task replaceAssignees(Task task, List<User> users, Integer version) {
-        if (!Objects.equals(task.getVersion(), version)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Task was updated by another user");
-        }
-        task.setAssignedUsers(users);
-        Task saved = taskRepository.saveAndFlush(task);
+    public Task replaceAssignees(Task task, List<User> users, Integer version /*ignored*/) {
+        // Versiyon kontrolü YOK: ne gelirse gelsin atamayı yap.
+        // Detached nesne riskine girmemek için managed entity'yi yükle:
+        Task managed = taskRepository.findById(task.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Task not found"));
 
-        writeAudit(saved.getId(), AuditAction.ASSIGN, null, Map.of("assigneeCount", users.size()));
+        managed.setAssignedUsers(users);
 
-        publish("TASK_ASSIGNEES_UPDATED", new TaskAssigneesUpdatedPayload(saved.getId(), nowIso(), saved), extractProjectId(saved));
+        Task saved = taskRepository.saveAndFlush(managed);
+
+        // Audit – kaç kişi atandı bilgisi kalsın
+        writeAudit(saved.getId(), AuditEvent.AuditAction.ASSIGN, null,
+                Map.of("assigneeCount", users != null ? users.size() : 0));
+
+        // WS – board/gantt güncelle
+        publish("TASK_ASSIGNEES_UPDATED",
+                new TaskAssigneesUpdatedPayload(saved.getId(), nowIso(), saved),
+                extractProjectId(saved));
+
         return saved;
     }
-
     /** DATES UPDATE (start/due) */
     @Transactional
     public Task updateTaskDates(Long id, LocalDate startDate, LocalDate dueDate) {
