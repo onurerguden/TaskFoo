@@ -62,7 +62,7 @@ public class TaskService {
                 Map.of());
 
         // WS
-        publish("TASK_CREATED", saved);
+        publish("TASK_CREATED", saved, extractProjectId(saved));
         return saved;
     }
 
@@ -86,7 +86,7 @@ public class TaskService {
             writeAudit(saved.getId(), AuditAction.UPDATE, null, Map.of());
         }
 
-        publish("TASK_UPDATED", saved);
+        publish("TASK_UPDATED", saved, extractProjectId(saved));
         return saved;
     }
 
@@ -101,7 +101,7 @@ public class TaskService {
 
         taskRepository.delete(existingTask);
 
-        publish("TASK_DELETED", new TaskDeletedPayload(existingTask.getId(), nowIso()));
+        publish("TASK_DELETED", new TaskDeletedPayload(existingTask.getId(), nowIso()), extractProjectId(existingTask));
     }
 
     /** STATUS CHANGE (drag&drop) */
@@ -142,7 +142,7 @@ public class TaskService {
                 nowIso(),
                 saved // snapshot
         );
-        publish("TASK_STATUS_CHANGED", payload);
+        publish("TASK_STATUS_CHANGED", payload, extractProjectId(saved));
 
         return saved;
     }
@@ -158,7 +158,7 @@ public class TaskService {
 
         writeAudit(saved.getId(), AuditAction.ASSIGN, null, Map.of("assigneeCount", users.size()));
 
-        publish("TASK_ASSIGNEES_UPDATED", new TaskAssigneesUpdatedPayload(saved.getId(), nowIso(), saved));
+        publish("TASK_ASSIGNEES_UPDATED", new TaskAssigneesUpdatedPayload(saved.getId(), nowIso(), saved), extractProjectId(saved));
         return saved;
     }
 
@@ -183,7 +183,7 @@ public class TaskService {
                 ),
                 Map.of());
 
-        publish("TASK_DATES_UPDATED", new TaskDatesUpdatedPayload(saved.getId(), nowIso(), saved));
+        publish("TASK_DATES_UPDATED", new TaskDatesUpdatedPayload(saved.getId(), nowIso(), saved), extractProjectId(saved));
         return saved;
     }
 
@@ -211,11 +211,29 @@ public class TaskService {
         auditRepository.save(ev);
     }
 
-    /** Aynı anda Board ve Gantt’a yayınla */
-    private void publish(String type, Object payload) {
+    /** Task -> Project id (epic üzerinden) */
+    private static Long extractProjectId(Task t) {
+        if (t == null) return null;
+        try {
+            if (t.getEpic() != null && t.getEpic().getProject() != null) {
+                return t.getEpic().getProject().getId();
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    /** Aynı anda global ve proje-bazlı topic'lere yayınla */
+    private void publish(String type, Object payload, Long projectId) {
         TaskEvent evt = new TaskEvent(type, payload);
+        // Global kanallar (tüm board/gantt dinleyicileri alır)
         broker.convertAndSend("/topic/tasks", evt);
         broker.convertAndSend("/topic/gantt", evt);
+
+        // Proje bazlı kanallar
+        if (projectId != null) {
+            broker.convertAndSend("/topic/board." + projectId, evt);
+            broker.convertAndSend("/topic/gantt." + projectId, evt);
+        }
     }
 
     private static String nowIso() {

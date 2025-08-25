@@ -23,6 +23,7 @@ import headerLogo from "./assets/header-logo.png";
 import { connectWebSocket, disconnectWebSocket, initTaskWs } from "./ws/client";
 import { me, logout } from "./api/auth";
 import Register from "./pages/Register";
+import AuditPage from "./pages/Audit";
 
 const { Header, Content } = Layout;
 
@@ -390,13 +391,24 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-
+      <Route
+        path="/audit"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <AuditPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
       {/* bilinmeyen route → dashboard'a */}
       <Route path="*" element={<Navigate to="/board" replace />} />
 
      
 
 <Route path="/register" element={<Register />} />
+
+
     </Routes>
   );
 }

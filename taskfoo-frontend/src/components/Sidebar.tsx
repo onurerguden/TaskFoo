@@ -12,6 +12,7 @@ import {
   TeamOutlined,
   UnorderedListOutlined,
   BarChartOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 
 import logo from "../assets/taskfoo-logo.png"; // Logo yolu
@@ -40,6 +41,12 @@ const items: MenuProps["items"] = [
   // Users
   { key: "/users", label: "Users", icon: <UnorderedListOutlined /> },
   { key: "/users/new", label: "New User", icon: <TeamOutlined /> },
+  
+  
+  
+  { key: "/audit", label: "Audit", icon: <HistoryOutlined /> },
+
+
 ];
 
 type Props = {
