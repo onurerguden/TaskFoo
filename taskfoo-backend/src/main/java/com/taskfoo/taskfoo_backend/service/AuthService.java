@@ -1,3 +1,4 @@
+// src/main/java/com/taskfoo/taskfoo_backend/service/AuthService.java
 package com.taskfoo.taskfoo_backend.service;
 
 import com.taskfoo.taskfoo_backend.dto.request.auth.LoginRequest;
@@ -50,10 +51,16 @@ public class AuthService {
         return new AuthResponse(token);
     }
 
+    /** Eğer başka yerler kullanıyorsa kalsın (controller artık bunu çağırmıyor) */
     public AuthResponse login(LoginRequest r) {
         Authentication auth = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(r.email(), r.password())
         );
+        return issueTokenFor(auth);
+    }
+
+    /** Controller authenticate ettikten sonra token üretimi burada */
+    public AuthResponse issueTokenFor(Authentication auth) {
         UserPrincipal up = (UserPrincipal) auth.getPrincipal();
         String token = jwt.generate(up.getUsername(), Map.of("uid", up.getUser().getId()));
         return new AuthResponse(token);

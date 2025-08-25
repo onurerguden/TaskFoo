@@ -1,35 +1,40 @@
-// src/main/java/com/taskfoo/taskfoo_backend/service/TaskService.java
 package com.taskfoo.taskfoo_backend.service;
 
 import com.taskfoo.taskfoo_backend.model.*;
-import com.taskfoo.taskfoo_backend.repository.TaskActivityRepository;
+import com.taskfoo.taskfoo_backend.repository.AuditEventRepository;
 import com.taskfoo.taskfoo_backend.repository.TaskRepository;
+import com.taskfoo.taskfoo_backend.support.RequestContext;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.OffsetDateTime;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+
+import static com.taskfoo.taskfoo_backend.model.AuditEvent.AuditAction;
 
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
-    private final TaskActivityRepository taskActivityRepository;
+    private final AuditEventRepository auditRepository;
     private final SimpMessagingTemplate broker;
 
     public TaskService(TaskRepository taskRepository,
-                       TaskActivityRepository taskActivityRepository,
+                       AuditEventRepository auditRepository,
                        SimpMessagingTemplate broker) {
         this.taskRepository = taskRepository;
-        this.taskActivityRepository = taskActivityRepository;
+        this.auditRepository = auditRepository;
         this.broker = broker;
     }
+
+    /* ---------------- Queries ---------------- */
 
     public List<Task> searchTasks(String keyword) {
         return taskRepository.findByTitleContainingIgnoreCase(keyword);
@@ -44,101 +49,203 @@ public class TaskService {
                 .orElseThrow(() -> new EntityNotFoundException("Task not found"));
     }
 
+    /* ---------------- Commands ---------------- */
+
+    /** CREATE */
     @Transactional
     public Task createTask(Task task) {
         Task saved = taskRepository.save(task);
 
-        // Audit: created
-        TaskActivity activity = new TaskActivity();
-        activity.setTaskId(saved.getId());
-        activity.setFromStatusId(TaskActivity.STATUS_CREATED);
-        activity.setToStatusId(saved.getStatus() != null ? saved.getStatus().getId() : TaskActivity.STATUS_NONE);
-        taskActivityRepository.save(activity);
+        // Audit
+        writeAudit(saved.getId(), AuditAction.CREATE,
+                List.of(new AuditEvent.ChangedField("statusId", null, saved.getStatus() != null ? saved.getStatus().getId() : null)),
+                Map.of());
 
         // WS
-        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_CREATED", saved));
+        publish("TASK_CREATED", saved);
         return saved;
     }
 
-    // Genel amaçlı save (PUT update sonrası)
+    /** Genel amaçlı update (PUT) */
     @Transactional
     public Task save(Task task) {
+        Task before = taskRepository.findById(task.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Task not found"));
+
         Task saved = taskRepository.saveAndFlush(task);
-        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_UPDATED", saved));
+
+        // Basit diff örneği (istersen genişlet)
+        Long beforeStatus = before.getStatus() != null ? before.getStatus().getId() : null;
+        Long afterStatus  = saved.getStatus()  != null ? saved.getStatus().getId()  : null;
+
+        if (!Objects.equals(beforeStatus, afterStatus)) {
+            writeAudit(saved.getId(), AuditAction.UPDATE,
+                    List.of(new AuditEvent.ChangedField("statusId", beforeStatus, afterStatus)),
+                    Map.of());
+        } else {
+            writeAudit(saved.getId(), AuditAction.UPDATE, null, Map.of());
+        }
+
+        publish("TASK_UPDATED", saved);
         return saved;
     }
 
+    /** DELETE */
     @Transactional
     public void deleteTask(Long id) {
         Task existingTask = getTaskById(id);
 
-        TaskActivity activity = new TaskActivity();
-        activity.setTaskId(existingTask.getId());
-        activity.setFromStatusId(existingTask.getStatus() != null ? existingTask.getStatus().getId() : TaskActivity.STATUS_NONE);
-        activity.setToStatusId(TaskActivity.STATUS_DELETED);
-        taskActivityRepository.save(activity);
+        writeAudit(existingTask.getId(), AuditAction.DELETE, null, Map.of(
+                "fromStatusId", existingTask.getStatus() != null ? existingTask.getStatus().getId() : null
+        ));
 
         taskRepository.delete(existingTask);
-        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_DELETED", existingTask));
+
+        publish("TASK_DELETED", new TaskDeletedPayload(existingTask.getId(), nowIso()));
     }
 
+    /** STATUS CHANGE (drag&drop) */
     @Transactional
     public Task changeStatus(Long taskId, Long statusId, Integer version) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
-        if (!task.getVersion().equals(version)) {
+        // Optimistic locking
+        if (!Objects.equals(task.getVersion(), version)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Task was updated by another user");
         }
 
-        Long fromStatusId = (task.getStatus() != null) ? task.getStatus().getId() : null;
+        Long fromStatusId = task.getStatus() != null ? task.getStatus().getId() : null;
+        Long toStatusId   = statusId;
 
-        // Status'i controller yükledi, burada sadece id set'i beklemiyoruz; controller'dan entity geldiği için
-        // bu methodun imzasını değiştirmedik; statusId değişikliğini repository tarafında trigger'lıyoruz:
-        Status newStatus = new Status();
-        newStatus.setId(statusId);
-
-        if (fromStatusId != null && fromStatusId.equals(newStatus.getId())) {
-            return task;
+        if (Objects.equals(fromStatusId, toStatusId)) {
+            return task; // no-op
         }
 
+        // sadece ID set’leyerek hafif status set
+        Status newStatus = new Status();
+        newStatus.setId(toStatusId);
         task.setStatus(newStatus);
-        taskRepository.saveAndFlush(task);
 
-        TaskActivity activity = new TaskActivity();
-        activity.setTaskId(task.getId());
-        activity.setFromStatusId(fromStatusId);
-        activity.setToStatusId(statusId);
-        taskActivityRepository.save(activity);
+        Task saved = taskRepository.saveAndFlush(task);
 
-        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_STATUS_CHANGED", task));
-        return task;
+        // Audit (MOVE + field diff)
+        writeAudit(saved.getId(), AuditAction.MOVE,
+                List.of(new AuditEvent.ChangedField("statusId", fromStatusId, toStatusId)),
+                Map.of("fromStatusId", fromStatusId, "toStatusId", toStatusId));
+
+        // WS: standart payload
+        TaskStatusChangedPayload payload = new TaskStatusChangedPayload(
+                saved.getId(),
+                fromStatusId,
+                toStatusId,
+                nowIso(),
+                saved // snapshot
+        );
+        publish("TASK_STATUS_CHANGED", payload);
+
+        return saved;
     }
 
+    /** ASSIGNEES REPLACE */
     @Transactional
     public Task replaceAssignees(Task task, List<User> users, Integer version) {
-        if (!task.getVersion().equals(version)) {
+        if (!Objects.equals(task.getVersion(), version)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Task was updated by another user");
         }
         task.setAssignedUsers(users);
         Task saved = taskRepository.saveAndFlush(task);
-        broker.convertAndSend("/topic/tasks", new TaskEvent("TASK_UPDATED", saved));
+
+        writeAudit(saved.getId(), AuditAction.ASSIGN, null, Map.of("assigneeCount", users.size()));
+
+        publish("TASK_ASSIGNEES_UPDATED", new TaskAssigneesUpdatedPayload(saved.getId(), nowIso(), saved));
         return saved;
     }
 
-
+    /** DATES UPDATE (start/due) */
     @Transactional
     public Task updateTaskDates(Long id, LocalDate startDate, LocalDate dueDate) {
         Task t = taskRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Task not found: " + id));
 
+        LocalDate beforeStart = t.getStartDate();
+        LocalDate beforeDue   = t.getDueDate();
+
         t.setStartDate(startDate);
         t.setDueDate(dueDate);
-        // JPA @Version alanı otomatik artacak
-        return taskRepository.save(t);
+
+        Task saved = taskRepository.saveAndFlush(t);
+
+        writeAudit(saved.getId(), AuditAction.UPDATE,
+                List.of(
+                        new AuditEvent.ChangedField("startDate", beforeStart, startDate),
+                        new AuditEvent.ChangedField("dueDate",   beforeDue,   dueDate)
+                ),
+                Map.of());
+
+        publish("TASK_DATES_UPDATED", new TaskDatesUpdatedPayload(saved.getId(), nowIso(), saved));
+        return saved;
     }
 
+    /* ---------------- Internals ---------------- */
+    private void writeAudit(Long taskId,
+                            AuditAction action,
+                            List<AuditEvent.ChangedField> changed,
+                            Map<String, Object> metadata) {
+        var rc = RequestContext.get();
 
+        AuditEvent ev = AuditEvent.builder()
+                .entityType("TASK")
+                .entityId(taskId)
+                .action(action)
+                .changedFields(changed)
+                .metadata(metadata == null || metadata.isEmpty() ? null : metadata)
+                .actorId(rc.actorId)
+                .actorName(rc.actorName)
+                .pageContext(rc.pageContext)
+                .clientChangeId(rc.clientChangeId)
+                .requestId(rc.requestId)
+                .ipAddress(rc.ip)
+                .build();
 
+        auditRepository.save(ev);
+    }
 
+    /** Aynı anda Board ve Gantt’a yayınla */
+    private void publish(String type, Object payload) {
+        TaskEvent evt = new TaskEvent(type, payload);
+        broker.convertAndSend("/topic/tasks", evt);
+        broker.convertAndSend("/topic/gantt", evt);
+    }
+
+    private static String nowIso() {
+        return OffsetDateTime.now().toString();
+    }
+
+    /* ---------------- Payload DTO'ları ---------------- */
+
+    public record TaskStatusChangedPayload(
+            Long taskId,
+            Long fromStatusId,
+            Long toStatusId,
+            String at,
+            Object snapshot
+    ) {}
+
+    public record TaskAssigneesUpdatedPayload(
+            Long taskId,
+            String at,
+            Object snapshot
+    ) {}
+
+    public record TaskDatesUpdatedPayload(
+            Long taskId,
+            String at,
+            Object snapshot
+    ) {}
+
+    public record TaskDeletedPayload(
+            Long taskId,
+            String at
+    ) {}
 }
