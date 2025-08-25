@@ -1,66 +1,99 @@
 // src/ws/client.ts
 import SockJS from "sockjs-client";
-import { Client } from "@stomp/stompjs";
-import type { IMessage } from "@stomp/stompjs";
+import { Client, type IMessage, type StompSubscription } from "@stomp/stompjs";
 
-let stompClient: Client | null = null;
+let stomp: Client | null = null;
+const activeSubs = new Map<string, StompSubscription>();
+const pendingHandlers = new Map<string, (evt: any) => void>();
+let tokenProvider: (() => string | null | undefined) | undefined;
 
-export function connectWebSocket() {
-  if (stompClient && stompClient.connected) return;
+/**
+ * Low-level connect. Call once at app boot (optional). If not called, first subscribe triggers it.
+ * You can pass a token getter to include Authorization on connect.
+ */
+export function wsConnect(getToken?: () => string | null | undefined) {
+  if (stomp) return;
+  tokenProvider = getToken;
 
-  stompClient = new Client({
+  stomp = new Client({
     webSocketFactory: () => new SockJS("/ws"),
     reconnectDelay: 5000,
     debug: () => {},
+    connectHeaders: getToken ? { Authorization: `Bearer ${getToken() ?? ""}` } : {},
   });
 
-  stompClient.activate();
+  // Re-subscribe all topics after (re)connect
+  stomp.onConnect = () => {
+    for (const [dest, handler] of pendingHandlers.entries()) {
+      const sub = stomp!.subscribe(dest, (msg) => dispatch(dest, msg, handler));
+      activeSubs.set(dest, sub);
+    }
+  };
+
+  stomp.activate();
+}
+
+/** Graceful disconnect (clears all subscriptions). */
+export function wsDisconnect() {
+  for (const [, sub] of activeSubs) sub.unsubscribe();
+  activeSubs.clear();
+  pendingHandlers.clear();
+  stomp?.deactivate();
+  stomp = null;
+}
+
+/** Subscribe to a STOMP destination. Returns an unsubscribe fn. */
+export function wsSubscribe(dest: string, onEvent: (evt: any) => void) {
+  if (!stomp) wsConnect(tokenProvider);
+
+  // store handler so we can re-subscribe after reconnect
+  pendingHandlers.set(dest, onEvent);
+
+  if (stomp?.connected) {
+    const sub = stomp.subscribe(dest, (msg) => dispatch(dest, msg, onEvent));
+    activeSubs.set(dest, sub);
+  }
+
+  // Unsubscribe function
+  return () => {
+    const sub = activeSubs.get(dest);
+    sub?.unsubscribe();
+    activeSubs.delete(dest);
+    pendingHandlers.delete(dest);
+  };
+}
+
+function dispatch(dest: string, msg: IMessage, handler: (evt: any) => void) {
+  let data: any;
+  try {
+    data = JSON.parse(msg.body);
+  } catch {
+    data = msg.body;
+  }
+  const type = (data?.type ?? data?.eventType ?? "UNKNOWN") as string;
+  const payload = data?.payload ?? data?.data ?? data;
+
+  const evt = { type, payload, dest };
+
+  // 1) component handler
+  handler(evt);
+  // 2) global CustomEvent (backward compatible with Board’s listener)
+  window.dispatchEvent(new CustomEvent("taskfoo:task-event", { detail: evt }));
+}
+
+/**
+ * Backward compatibility with the old API.
+ * Subscribes to `/topic/tasks` and forwards as CustomEvent.
+ */
+export function connectWebSocket(getToken?: () => string | null | undefined) {
+  wsConnect(getToken);
 }
 
 export function disconnectWebSocket() {
-  if (stompClient) {
-    stompClient.deactivate();
-    stompClient = null;
-  }
+  wsDisconnect();
 }
 
 export function initTaskWs(onEvent?: (evt: any) => void) {
-  if (!stompClient) connectWebSocket();
-
-  if (stompClient) {
-    const handleMessage = (msg: IMessage) => {
-      let data: any;
-      try {
-        data = JSON.parse(msg.body);
-      } catch {
-        data = msg.body;
-      }
-
-      // Normalle: { type, payload } şekline getir (backend bazen payload yerine data yolluyor olabilir)
-      const type = data?.type ?? data?.eventType ?? "UNKNOWN";
-      const payload = data?.payload ?? data?.data ?? data;
-
-      // 1) İstersen callback’e geçir
-      onEvent?.({ type, payload });
-
-      // 2) Her durumda CustomEvent fırlat -> Board/Tasks’teki effect bunu dinliyor
-      window.dispatchEvent(
-        new CustomEvent("taskfoo:task-event", {
-          detail: { type, payload },
-        })
-      );
-    };
-
-    const doSubscribe = () => {
-      stompClient!.subscribe("/topic/tasks", handleMessage);
-    };
-
-    if (stompClient.connected) {
-      doSubscribe();
-    }
-
-    stompClient.onConnect = () => {
-      doSubscribe();
-    };
-  }
+  // default global topic used previously
+  return wsSubscribe("/topic/tasks", (evt) => onEvent?.(evt));
 }

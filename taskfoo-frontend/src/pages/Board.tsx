@@ -4,9 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import "/src/Board.css";
 
 
-
-
+import { wsSubscribe } from "../ws/client";
 import {
+
   DndContext,
   type DragEndEvent,
   type DragStartEvent,
@@ -819,18 +819,23 @@ const [assigningTask, setAssigningTask] = useState<TaskWithMetadata | null>(null
 const [assignUserIds, setAssignUserIds] = useState<number[]>([]);
 const [deletingTask, setDeletingTask] = useState<TaskWithMetadata | null>(null);
 
-  // Board component içinde:
-useEffect(() => {
-  const handler = (e: Event) => {
-    const evt = (e as CustomEvent).detail;
-    if (!evt) return;
-    // Ne gelirse gelsin, en doğrusu listeleri tazelemek
-    qc.invalidateQueries({ queryKey: ["tasks"] });
-  };
+  // WebSocket subscriptions: invalidate task list on any board/task event
+  useEffect(() => {
+    // Primary topic used by backend for board updates
+    const offTasks = wsSubscribe("/topic/tasks", () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    });
 
-  window.addEventListener("taskfoo:task-event", handler as EventListener);
-  return () => window.removeEventListener("taskfoo:task-event", handler as EventListener);
-}, [qc]);
+    // Optional board-wide topic (kept for forward-compat if backend publishes here)
+    const offBoard = wsSubscribe("/topic/board", () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+    });
+
+    return () => {
+      offTasks?.();
+      offBoard?.();
+    };
+  }, [qc]);
 
   // Filters state
   const [filters, setFilters] = useState<FilterState>({

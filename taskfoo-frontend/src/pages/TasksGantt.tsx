@@ -13,6 +13,7 @@ import { SyncOutlined, MoreOutlined, EditOutlined, UserAddOutlined, DeleteOutlin
 
 import { listUsers } from "../api/users";
 import TaskEdit from "./TaskEdit";
+import { wsSubscribe } from "../ws/client";
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -1155,6 +1156,37 @@ export default function TasksGantt() {
   };
 
   const datasetEmpty = ganttTasks.length === 0;
+
+  // Live updates via WebSocket (STOMP)
+  React.useEffect(() => {
+    const onMsg = (evt: any) => {
+      const type = String(evt?.type ?? evt?.eventType ?? "");
+      // Always refresh tasks for gantt changes
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      // Opportunistically refresh related data sets
+      if (type.includes("PROJECT")) {
+        qc.invalidateQueries({ queryKey: ["projects"] });
+      }
+      if (type.includes("EPIC")) {
+        qc.invalidateQueries({ queryKey: ["epics"] });
+      }
+    };
+
+    const unsubs: Array<() => void> = [];
+    try {
+      unsubs.push(wsSubscribe("/topic/tasks", onMsg));
+    } catch {}
+    try {
+      // Optional, if backend emits gantt/model-specific events
+      unsubs.push(wsSubscribe("/topic/gantt", onMsg));
+    } catch {}
+
+    return () => {
+      for (const u of unsubs) {
+        try { u(); } catch {}
+      }
+    };
+  }, [qc]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
