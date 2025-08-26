@@ -1,91 +1,98 @@
 version: "3.1"
-
 nlu:
-- intent: greet
-  examples: |
-    - hey
-    - hello
-    - hi
-    - hello there
-    - good morning
-    - good evening
-    - moin
-    - hey there
-    - let's go
-    - hey dude
-    - goodmorning
-    - goodevening
-    - good afternoon
+  # ---- greet ----
+  - intent: greet
+    examples: |
+      - hi
+      - hello
+      - hey
+      - hi there
+      - hey there
+      - hello there
+      - good morning
+      - good afternoon
+      - good evening
 
-- intent: goodbye
-  examples: |
-    - cu
-    - good by
-    - cee you later
-    - good night
-    - bye
-    - goodbye
-    - have a nice day
-    - see you around
-    - bye bye
-    - see you later
+  # ---- goodbye ----
+  - intent: goodbye
+    examples: |
+      - bye
+      - goodbye
+      - see you
+      - see you later
+      - catch you later
+      - talk to you soon
+      - take care
+      - cya
+      - later
 
-- intent: affirm
-  examples: |
-    - yes
-    - y
-    - indeed
-    - of course
-    - that sounds good
-    - correct
+  # ---- thanks ----
+  - intent: thanks
+    examples: |
+      - thanks
+      - thank you
+      - thx
+      - appreciate it
+      - many thanks
+      - thanks a lot
+      - thank you so much
+      - cheers, thanks
 
-- intent: deny
-  examples: |
-    - no
-    - n
-    - never
-    - I don't think so
-    - don't like that
-    - no way
-    - not really
+  # ---- bot purpose ----
+  - intent: bot_purpose
+    examples: |
+      - what can you do
+      - what are your capabilities
+      - what is your purpose
+      - what do you help with
+      - how can you help me
 
-- intent: mood_great
-  examples: |
-    - perfect
-    - great
-    - amazing
-    - feeling like a king
-    - wonderful
-    - I am feeling very good
-    - I am great
-    - I am amazing
-    - I am going to save the world
-    - super stoked
-    - extremely good
-    - so so perfect
-    - so good
-    - so perfect
+  # ---- smalltalk ----
+  - intent: smalltalk
+    examples: |
+      - how are you
+      - what's up
+      - how is it going
+      - how are you doing
+      - how is your day
 
-- intent: mood_unhappy
-  examples: |
-    - my day was horrible
-    - I am sad
-    - I don't feel very well
-    - I am disappointed
-    - super sad
-    - I'm so sad
-    - sad
-    - very sad
-    - unhappy
-    - not good
-    - not very good
-    - extremly sad
-    - so saad
-    - so sad
+  # ---- task help (generic, not API) ----
+  - intent: task_help
+    examples: |
+      - how should I plan my tasks
+      - give me sprint planning advice
+      - how to do a daily standup
+      - tips for cleaning the backlog
+      - how to prioritize tasks
+      - how to break down a big task
 
-- intent: bot_challenge
-  examples: |
-    - are you a bot?
-    - are you a human?
-    - am I talking to a bot?
-    - am I talking to a human?
+  # ---- list_overdue (be VERY specific so it doesn't steal 'thanks') ----
+  - intent: list_overdue
+    examples: |
+      - show my overdue tasks
+      - any overdue tasks
+      - list overdue items
+      - which tasks are overdue
+      - do I have overdue tasks
+      - what is overdue today
+      - are there any tasks past due
+      - show overdue tickets
+
+  # ---- task_status (demo phrasing) ----
+  - intent: task_status
+    examples: |
+      - status of task 12
+      - what's the status of task 33
+      - show task 7 status
+      - task 15 state
+      - tell me the status of 42
+      - get task 21 status
+
+  # ---- out of scope ----
+  - intent: out_of_scope
+    examples: |
+      - what's the weather
+      - exchange rate for usd
+      - tell me a joke
+      - sing me a song
+      - who won the game

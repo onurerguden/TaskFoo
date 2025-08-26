@@ -16,7 +16,7 @@ import Projects from "./pages/Projects";
 import TasksGantt from "./pages/TasksGantt";
 import TaskEdit from "./pages/TaskEdit";
 import Login from "./pages/Login"; // <= Login sayfası
-
+import Chatbot from "./components/Chatbot";
 import Sidebar from "./components/Sidebar";
 import headerLogo from "./assets/header-logo.png";
 
@@ -257,6 +257,7 @@ function AppShell({ children }: { children: JSX.Element }) {
           {children}
         </Content>
       </Layout>
+      <Chatbot />
     </Layout>
   );
 }
@@ -404,7 +405,7 @@ export default function App() {
       {/* bilinmeyen route → dashboard'a */}
       <Route path="*" element={<Navigate to="/board" replace />} />
 
-     
+      
 
 <Route path="/register" element={<Register />} />
 

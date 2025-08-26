@@ -1,13 +1,54 @@
 version: "3.1"
-
 rules:
+  - rule: greet
+    steps:
+      - intent: greet
+      - action: utter_greet
 
-- rule: Say goodbye anytime the user says goodbye
-  steps:
-  - intent: goodbye
-  - action: utter_goodbye
+  - rule: goodbye
+    steps:
+      - intent: goodbye
+      - action: utter_goodbye
 
-- rule: Say 'I am a bot' anytime the user challenges
-  steps:
-  - intent: bot_challenge
-  - action: utter_iamabot
+  - rule: thanks
+    steps:
+      - intent: thanks
+      - action: utter_thanks
+
+  - rule: purpose
+    steps:
+      - intent: bot_purpose
+      - action: utter_bot_purpose
+
+  - rule: smalltalk
+    steps:
+      - intent: smalltalk
+      - action: utter_smalltalk
+
+  - rule: task help
+    steps:
+      - intent: task_help
+      - action: utter_task_help
+
+  - rule: out of scope
+    steps:
+      - intent: out_of_scope
+      - action: utter_out_of_scope
+
+  - rule: fallback
+    steps:
+      - intent: nlu_fallback
+      - action: utter_fallback
+
+
+
+  # Şimdilik custom action yerine bilgilendirici cevap verelim
+  - rule: handle task_status in demo
+    steps:
+      - intent: task_status
+      - action: utter_task_help
+
+  - rule: handle list_overdue in demo
+    steps:
+      - intent: list_overdue
+      - action: utter_task_help

@@ -3,32 +3,58 @@ version: "3.1"
 intents:
   - greet
   - goodbye
+  - thanks
+  - bot_purpose
+  - smalltalk
+  - task_help
+  - out_of_scope
+  # Stories/rules içinde görünen eksikler:
   - affirm
   - deny
   - mood_great
   - mood_unhappy
-  - bot_challenge
+  - task_status
+  - list_overdue
 
 responses:
   utter_greet:
-  - text: "Hey! How are you?"
-
-  utter_cheer_up:
-  - text: "Here is something to cheer you up:"
-    image: "https://i.imgur.com/nGF1K8f.jpg"
-
-  utter_did_that_help:
-  - text: "Did that help you?"
-
-  utter_happy:
-  - text: "Great, carry on!"
-
+    - text: "Hi! I’m the TaskFoo assistant. How can I help?"
+    - text: "Hello there 👋 Ready when you are."
   utter_goodbye:
-  - text: "Bye"
+    - text: "See you! Have a productive day."
+  utter_thanks:
+    - text: "You’re welcome! 🙌"
+  utter_bot_purpose:
+    - text: "For now I answer general questions. Soon I’ll connect to TaskFoo’s API to fetch real data."
+  utter_smalltalk:
+    - text: "I’m here. How’s your sprint going?"
+    - text: "Busy day? We can tidy your flow together."
+  utter_task_help:
+    - text: |
+        I’m in demo mode. Here are a few tips I can explain:
+        • How to plan today’s tasks
+        • Quick ways to trim the backlog
+        • What a concise daily stand-up looks like
+  utter_out_of_scope:
+    - text: "I can’t answer that yet—could you rephrase?"
+  utter_fallback:
+    - text: "I didn’t quite get that. Could you clarify?"
 
-  utter_iamabot:
-  - text: "I am a bot, powered by Rasa."
+  # Stories’te adı geçen ama domain’de olmayan utter’lar:
+  utter_happy:
+    - text: "Great to hear! 🚀"
+  utter_cheer_up:
+    - text: "Here’s a tip: keep PRs small and focused—it lifts spirits!"
+  utter_did_that_help:
+    - text: "Did that help?"
 
-session_config:
-  session_expiration_time: 60
-  carry_over_slots_to_new_session: true
+actions:
+  # Stories/rules içinde geçen custom actions’ı domain’e yazmak şart,
+  # API modunu sonra açacağız; şimdilik listedeler ama çalıştırmazsın.
+  - action_list_overdue
+  - action_task_status
+
+# (opsiyonel) session_config ekleyebilirsin
+# session_config:
+#   session_expiration_time: 60
+#   carry_over_slots_to_new_session: true
