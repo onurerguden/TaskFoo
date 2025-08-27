@@ -337,4 +337,10 @@ export default function Chatbot() {
       `}</style>
     </>
   );
+
+  //train more 
+  //add image support
+  //add instructions
+  //add buttons
+  //improve UI
 }
