@@ -14,7 +14,7 @@ export default function PageHeader({ title, actionText, to, style }: Props) {
   return (
     <div
       style={{
-        background: "#3092B9", 
+        background: "#3092B9",
         padding: "8px 16px",
         marginBottom: 12,
         ...style,
@@ -26,7 +26,6 @@ export default function PageHeader({ title, actionText, to, style }: Props) {
           margin: "0 auto",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           gap: 12,
         }}
       >
@@ -37,25 +36,37 @@ export default function PageHeader({ title, actionText, to, style }: Props) {
           {title}
         </Typography.Title>
         <Button
-  type="primary"
-  onClick={() => nav(to)}
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "6px 14px",
-    background: "white",
-    color: "#1e40af",
-    border: "none",
-    borderRadius: 8,
-    fontWeight: 600,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-    whiteSpace: "nowrap", // küçülünce yazının taşmasını engeller
-  }}
->
-  <PlusOutlined style={{ fontSize: 16 }} />
-  <span>{actionText}</span>
-</Button>
+          type="primary"
+          onClick={() => nav(to)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 20px",
+            background: "rgba(6, 43, 67, 0.85)",
+            color: "white",
+            border: "none",
+            borderRadius: 999,
+            fontWeight: 600,
+            boxShadow: "0 2px 8px rgba(48,146,185,0.10)",
+            whiteSpace: "nowrap",
+            marginLeft: "auto",
+            transition: "all 0.15s",
+          }}
+          onMouseOver={e => {
+            (e.currentTarget as HTMLElement).style.background = "#fff";
+            (e.currentTarget as HTMLElement).style.color = "#3092B9";
+            (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(48,146,185,0.13)";
+          }}
+          onMouseOut={e => {
+            (e.currentTarget as HTMLElement).style.background = "rgba(6, 43, 67, 0.85)";
+            (e.currentTarget as HTMLElement).style.color = "white";
+            (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(48,146,185,0.10)";
+          }}
+        >
+          <PlusOutlined style={{ fontSize: 16 }} />
+          <span>{actionText}</span>
+        </Button>
       </div>
     </div>
   );
