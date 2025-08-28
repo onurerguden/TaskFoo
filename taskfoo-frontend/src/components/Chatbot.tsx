@@ -7,21 +7,6 @@ type BotAPIItem = {
   custom?: any;
 };
 
-function navigateFromBotCustom(custom: any) {
-  if (!custom) return;
-  // Rasa SDK: dispatcher.utter_message(json_message={ ... }) lands here as `custom` (aka `json`)
-  if (custom.type === "frontend_navigate" && custom.page) {
-    // 1) fire a custom event other parts of the app can listen to
-    window.dispatchEvent(new CustomEvent("taskfoo:navigate", { detail: { page: custom.page } }));
-    // 2) optional: naive fallback if you use hash routing
-    try {
-      if (typeof custom.hash === "string") {
-        window.location.hash = custom.hash;
-      }
-    } catch {}
-    console.log("[Chatbot] navigation requested:", custom);
-  }
-}
 
 const BOT_URL = import.meta.env.VITE_BOT_URL || "http://localhost:5005";
 
@@ -66,7 +51,6 @@ export default function Chatbot() {
         const apiItems: BotAPIItem[] = Array.isArray(data) ? data : [];
 
         // trigger any frontend actions (navigation etc.)
-        apiItems.forEach((item) => navigateFromBotCustom(item.custom));
 
         const botMsgs: Msg[] = [];
         apiItems.forEach((d) => {
@@ -342,7 +326,7 @@ export default function Chatbot() {
           height: 8px;
           border-radius: 50%;
           background: #93a9b6;
-          animation: typingBounce 1.4s ease-in-out infinite;
+          animation: typingBounce 1.4s ease-in-out infinite.
         }
 
         @keyframes typingBounce {
@@ -364,7 +348,7 @@ export default function Chatbot() {
         }
 
         .chat-panel::-webkit-scrollbar-track {
-          background: transparent;
+          background: transparent.
         }
 
         .chat-panel::-webkit-scrollbar-thumb {

@@ -1,32 +1,28 @@
 version: "3.1"
 nlu:
-  # ---- greet ----
+  # ---- Greet ----
   - intent: greet
     examples: |
       - hi
       - hello
       - hey
       - hi there
-      - hey there
       - hello there
       - good morning
       - good afternoon
-      - good evening
+      - hey, how are you
 
-  # ---- goodbye ----
+  # ---- Goodbye ----
   - intent: goodbye
     examples: |
       - bye
       - goodbye
       - see you
-      - see you later
-      - catch you later
       - talk to you soon
       - take care
-      - cya
       - later
 
-  # ---- thanks ----
+  # ---- Thanks ----
   - intent: thanks
     examples: |
       - thanks
@@ -34,20 +30,9 @@ nlu:
       - thx
       - appreciate it
       - many thanks
-      - thanks a lot
-      - thank you so much
       - cheers, thanks
 
-  # ---- bot purpose ----
-  - intent: bot_purpose
-    examples: |
-      - what can you do
-      - what are your capabilities
-      - what is your purpose
-      - what do you help with
-      - how can you help me
-
-  # ---- smalltalk ----
+  # ---- Smalltalk ----
   - intent: smalltalk
     examples: |
       - how are you
@@ -56,65 +41,23 @@ nlu:
       - how are you doing
       - how is your day
 
-  # ---- task help (generic, not API) ----
-  - intent: task_help
+  # ---- Bot Purpose ----
+  - intent: bot_purpose
     examples: |
-      - how should I plan my tasks
-      - give me sprint planning advice
-      - how to do a daily standup
-      - tips for cleaning the backlog
-      - how to prioritize tasks
-      - how to break down a big task
+      - what can you do
+      - what is your purpose
+      - what are your capabilities
+      - how can you help me
+      - introduce yourself
 
-  # ---- list_overdue (be VERY specific so it doesn't steal 'thanks') ----
-  - intent: list_overdue
-    examples: |
-      - show my overdue tasks
-      - any overdue tasks
-      - list overdue items
-      - which tasks are overdue
-      - do I have overdue tasks
-      - what is overdue today
-      - are there any tasks past due
-      - show overdue tickets
-
-
-  # ---- out of scope ----
-  - intent: out_of_scope
-    examples: |
-      - what's the weather
-      - exchange rate for usd
-      - tell me a joke
-      - sing me a song
-      - who won the game
-
-# ---- App-wide helper (overview & navigation) ----
+  # ---- App Overview ----
   - intent: app_help_overview
     examples: |
       - What can I do in TaskFoo?
       - Give me a quick tour of the app
-      - How does this app work?
       - Explain the main sections of TaskFoo
-      - Where do I manage work in TaskFoo?
-      - What are the key pages and what do they do?
-      - Show me the features of TaskFoo
       - Help me understand the app layout
       - How do I get started with TaskFoo?
-      - I need help using the app
-
-  - intent: navigate_page
-    examples: |
-      - Open the [Board](page)
-      - Go to the board page
-      - Take me to Board
-      - Navigate to the Gantt chart
-      - Switch to Dashboard
-      - Where is the Tasks page?
-      - Show the New Task screen
-      - I want to create a new project
-      - Go to Epics
-      - Take me to Users
-      - Open the Audit page
 
   # ---- Board ----
   - intent: board_usage
@@ -122,68 +65,36 @@ nlu:
       - How do I use the board?
       - What can I do on the board view?
       - How to move a task on the board
-      - Can I drag and drop tasks between columns?
-      - How do I filter tasks on the board?
-      - How to change task status on the board?
-      - Where do I group by status or assignee on the board?
-      - How to search on the board
-      - Show me swimlanes
-      - How to see only my tasks on the board
+      - How to filter tasks on the board
 
-  # ---- Gantt Chart ----
+  # ---- Gantt ----
   - intent: gantt_usage
     examples: |
       - What can I do in the Gantt chart?
       - How to zoom the Gantt timeline
-      - How do I set start and due dates?
-      - Can I adjust task duration on the Gantt?
-      - How to create dependencies between tasks
-      - How do I collapse or expand a project in the Gantt?
-      - How to jump to today on the Gantt
-      - How to filter by project in the Gantt
-      - How do I export or screenshot the Gantt?
-      - Can I see the critical path?
+      - How to set start and due dates
+      - How to create dependencies
 
   # ---- Dashboard ----
   - intent: dashboard_overview
     examples: |
       - What does the dashboard show?
       - Which widgets are on the dashboard?
-      - How to read the status summary
-      - Show me overdue/at risk on the dashboard
-      - Where can I see active projects?
-      - How to customize the dashboard?
-      - What KPIs are available on the dashboard?
-      - How to refresh the dashboard
-      - Can I filter the dashboard by assignee?
-      - Where can I see my workload?
+      - How to customize the dashboard
+      - What KPIs are available?
 
-  # ---- Tasks (list & details) ----
+  # ---- Tasks ----
   - intent: task_list_usage
     examples: |
       - How do I use the Tasks page?
       - How to search tasks
-      - How to sort tasks by due date
       - How to filter by status or assignee
-      - Where can I bulk update tasks?
-      - How to open task details
-      - How to add a comment to a task
-      - How to change priority of a task
-      - How to attach files to a task
-      - How to archive or delete a task
 
   - intent: task_create_help
     examples: |
       - How do I create a new task?
       - What fields are required for a task?
       - Can I assign a task while creating it?
-      - How do I set due date when creating a task?
-      - How to link a task to an epic or project
-      - Where do I add labels/tags to a task?
-      - Can I create recurring tasks?
-      - How to add a checklist to a task
-      - How to estimate effort or story points
-      - How to create a task from the board
 
   # ---- Projects ----
   - intent: project_overview
@@ -191,105 +102,54 @@ nlu:
       - What can I do on the Projects page?
       - How to view project details
       - How to see all tasks under a project
-      - How to change a project's status
-      - Where to manage project members
-      - How to filter projects
-      - Can I archive a project?
-      - How to see project progress
-      - How to view project timeline
-      - How to search projects
 
   - intent: project_create_help
     examples: |
       - How do I create a new project?
       - What fields are required for a project?
-      - How to set project start and end dates
-      - How to choose a project owner
-      - Can I add default labels or workflow to a project?
-      - How to add members to a project during creation
-      - How to set project goals or description
-      - How to import tasks into a new project
-      - Where to set project privacy or visibility
-      - How to clone an existing project
 
   # ---- Epics ----
   - intent: epic_overview
     examples: |
       - What is an epic in TaskFoo?
       - How do epics relate to tasks and projects?
-      - How to view epic details
-      - How to see tasks under an epic
-      - How to track epic progress
-      - How to filter epics
-      - Can I close or archive an epic?
-      - How to move tasks between epics
-      - How to link epics to projects
-      - Show me epic status options
 
   - intent: epic_create_help
     examples: |
       - How do I create a new epic?
       - What fields are required for an epic?
-      - How to set epic dates
-      - Can I add a template for epics?
-      - How to assign an owner to an epic
-      - How to add labels to an epic
-      - How to connect tasks to a new epic
-      - How to write a good epic description
-      - How to reorder epics
-      - Can I split an epic?
 
   # ---- Users ----
   - intent: user_mgmt_help
     examples: |
       - How do I manage users?
       - How to change a user's role
-      - How to deactivate or suspend a user
-      - How to reset a user's password
-      - Where to see user activity
-      - How to filter users by team
-      - How to invite users to a project
-      - What roles exist in TaskFoo?
-      - How to set admin permissions
-      - How to update a user's profile
+      - How to deactivate a user
 
   - intent: user_create_help
     examples: |
       - How do I create a new user?
       - What info is required to add a user?
-      - How to assign roles while creating a user
-      - Can I bulk invite users?
-      - How to resend an invite
-      - How to add a user to multiple projects
-      - How to set default permissions
-      - Where to add a user's title or department
-      - How to upload a user's avatar
-      - How to import users from CSV
 
   # ---- Audit ----
   - intent: audit_usage
     examples: |
       - What is the Audit page for?
       - How to see who changed what
-      - How to filter audit logs by user
-      - How to filter by action or entity
       - How to search the audit trail
-      - Can I export audit logs?
-      - How to see changes for a specific task
-      - How to view login activity
-      - How long do you keep audit logs?
-      - How to check permission changes
 
-  # ---- Task data via backend (JWT-protected) ----
-  - intent: task_status
+  # ---- Task Coaching ----
+  - intent: task_help
     examples: |
-      - check task status
-      - what is the status of my tasks
-      - show task status summary
-      - how many tasks are in progress
-      - list tasks done today
-      - what is due this week
-      - show me tasks assigned to me
-      - which tasks are blocked
-      - show tasks by status
-      - how many tasks are open
+      - how should I plan my tasks
+      - give me sprint planning advice
+      - how to do a daily standup
+      - tips for cleaning the backlog
+
+  # ---- Out of Scope ----
+  - intent: out_of_scope
+    examples: |
+      - what's the weather
+      - tell me a joke
+      - sing me a song
+      - who won the game

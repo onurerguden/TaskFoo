@@ -4,13 +4,9 @@ intents:
   - greet
   - goodbye
   - thanks
-  - bot_purpose
   - smalltalk
-  - task_help
-  - out_of_scope
-  - nlu_fallback
+  - bot_purpose
   - app_help_overview
-  - navigate_page
   - board_usage
   - gantt_usage
   - dashboard_overview
@@ -23,120 +19,114 @@ intents:
   - user_mgmt_help
   - user_create_help
   - audit_usage
-  - list_overdue
-  - task_status
-
-entities:
-  - page
+  - task_help
+  - out_of_scope
+  - nlu_fallback
 
 responses:
   utter_greet:
-    - text: "Hello there! I'm ready to help you."
+    - text: "Hello 👋 I'm the TaskFoo Assistant. Nice to meet you!"
+  utter_introduction:
+    - text: |
+        I can help you with:
+        • 🧭 Explaining app sections  
+        • ✅ Tips for tasks and projects  
+        • 📊 Guidance on Board / Gantt / Dashboard / Users / Audit
   utter_goodbye:
-    - text: "See you! Have a productive day."
+    - text: "Goodbye! Have a productive day 🚀"
   utter_thanks:
     - text: "You're welcome! 🙌"
+  utter_smalltalk:
+    - text: "I'm doing well, thanks for asking 😊 How about you?"
   utter_bot_purpose:
     - text: |
-        I’m your TaskFoo assistant. I can explain how the app works, where to do things,
-        and run certain actions (like checking task status) using your account.
-  utter_smalltalk:
-    - text: "I’m here. How’s your sprint going?"
+        My purpose is to explain how TaskFoo works and give you best practices for managing your work.
   utter_out_of_scope:
-    - text: "That’s outside my scope. I can help with TaskFoo usage and your work items."
+    - text: "Sorry, that's outside my scope. I can help with TaskFoo usage and task management."
   utter_fallback:
-    - text: "I didn’t quite get that. Try rephrasing or ask for app help."
+    - text: "I didn’t quite get that. Try asking about Board, Gantt, Dashboard, Tasks, Projects, Epics, Users, or Audit."
   utter_app_help_overview:
     - text: |
-        TaskFoo layout:
-        • Board – drag & drop workflow, quick status changes
-        • Gantt Chart – timelines, durations, dependencies
-        • Dashboard – KPIs, status summaries, at-risk items
-        • Tasks – search, filter, bulk update, details
-        • Projects / Epics – hierarchy & progress
-        • Users – roles & permissions
-        • Audit – who changed what and when
-        Ask “Navigate to <page>” or “How do I <do-thing>?” for details.
-  utter_navigate_help:
-    - text: |
-        You can open: Board, Gantt Chart, Dashboard, Tasks, New Task, Projects, New Project,
-        Epics, New Epic, Users, New User, Audit. Say “Go to Board” or “Open the Audit page”.
+        **TaskFoo Overview**  
+        • **Board** 🗂️ – Drag & drop workflow, quick status changes  
+        • **Gantt** 📆 – Timelines, durations, dependencies  
+        • **Dashboard** 📊 – Status summaries, KPIs, at-risk items  
+        • **Tasks** ✅ – Search, filter, bulk update, details  
+        • **Projects/Epics** 🧩 – Hierarchy & progress tracking  
+        • **Users** 👥 – Roles & permissions  
+        • **Audit** 🔍 – Who changed what and when
   utter_board_usage:
     - text: |
-        Board tips:
-        • Drag & drop between columns to change status
-        • Filter by assignee, project, label; search is top-right
-        • Group by status/assignee; show only “My tasks”
-        • Open a card to change priority, dates, or add comments
+        **Board tips** 🗂️  
+        • Drag and drop tasks to change status  
+        • Filter by assignee, project, or label  
+        • Show only “My tasks” for focus
   utter_gantt_usage:
     - text: |
-        Gantt tips:
-        • Zoom with +/–; “Today” jumps to current date
-        • Drag edges to adjust duration; set start/due in details
-        • Create dependencies; collapse/expand projects
-        • Filter by project; export screenshot from toolbar
+        **Gantt tips** 📆  
+        • Zoom in/out, jump to today  
+        • Drag edges to adjust duration  
+        • Create dependencies, expand/collapse projects
   utter_dashboard_overview:
     - text: |
-        Dashboard shows: status summary, overdue/at-risk, active projects, workload.
-        You can customize widgets and filter by assignee/project.
+        **Dashboard** 📊  
+        • See status summary, overdue or risky items  
+        • Track active projects and workload  
+        • Customize widgets and filters
   utter_task_list_usage:
     - text: |
-        Tasks page:
-        • Search & advanced filters (status, assignee, project, labels)
-        • Sort by due date/priority; bulk update selections
-        • Open details to comment, attach files, change fields
+        **Tasks** ✅  
+        • Search & filter (status, assignee, project, labels)  
+        • Sort by due date or priority  
+        • Bulk update selections
   utter_task_create_help:
     - text: |
-        New Task:
-        • Required: title; optional: description, assignee, dates, priority
-        • Link to project/epic, add labels, checklist, estimates
-        • You can also create from Board column
+        **New Task** 📝  
+        • Required: title  
+        • Optional: description, assignee, dates, priority  
+        • Link to project/epic, add labels or checklist
   utter_project_overview:
     - text: |
-        Projects:
-        • View details, progress, members
+        **Projects** 🧱  
+        • View details, progress, and members  
         • Filter/search projects, archive when done
-        • See project timeline and all related tasks
   utter_project_create_help:
     - text: |
-        New Project:
-        • Required: name; set owner, start/end dates, goals/description
-        • Add members, default labels/workflow, privacy/visibility
-        • Import or clone from an existing project
+        **New Project** 🚀  
+        • Required: name  
+        • Optional: owner, dates, goals, members
   utter_epic_overview:
     - text: |
-        Epics:
-        • Group related tasks across projects
-        • Track progress and move tasks between epics
-        • Link epics to projects; manage status
+        **Epics** 🧩  
+        • Group related tasks  
+        • Track progress across projects
   utter_epic_create_help:
     - text: |
-        New Epic:
-        • Required: title; set dates, owner, labels
-        • Connect tasks; write a clear problem/outcome description
-        • You can split/reorder epics later
+        **New Epic** ✨  
+        • Required: title  
+        • Optional: dates, owner, labels
   utter_user_mgmt_help:
     - text: |
-        Users:
-        • Change roles, reset passwords, deactivate/suspend
-        • View activity and filter by team; manage admin permissions
-        • Invite users to projects
+        **Users** 👥  
+        • Manage roles and permissions  
+        • Reset passwords, suspend accounts
   utter_user_create_help:
     - text: |
-        New User:
-        • Required info: name, email
-        • Assign roles, add to projects, set default permissions
-        • Bulk CSV import and resend invites are supported
+        **New User** ➕  
+        • Required: name, email  
+        • Assign roles and project access
   utter_audit_usage:
     - text: |
-        Audit:
-        • Search and filter by user, action, entity or date
-        • Inspect change history for a task or user, export logs
-        • Includes login and permission changes
+        **Audit** 🔍  
+        • Filter by user, action, entity, or date  
+        • Inspect task/user history  
+        • Export logs if needed
   utter_task_help:
     - text: |
-        I can guide planning, standups, backlog hygiene and prioritization.
-        Ask me about Board/Gantt/Dashboard/Tasks/Projects/Epics/Users/Audit.
+        **Task Planning Tips** 🧠  
+        • Keep backlog clean and prioritized  
+        • Plan sprints with clear goals  
+        • Break down big tasks into smaller ones  
+        • Daily standups: what you did, what you’ll do, blockers
 
-actions:
-  - action_navigate_page
+actions: []

@@ -1,2 +1,16 @@
 version: "3.1"
-stories: []
+stories:
+  - story: greet and ask overview
+    steps:
+      - intent: greet
+      - action: utter_greet
+      - action: utter_introduction
+      - intent: app_help_overview
+      - action: utter_app_help_overview
+
+  - story: smalltalk then board help
+    steps:
+      - intent: smalltalk
+      - action: utter_smalltalk
+      - intent: board_usage
+      - action: utter_board_usage

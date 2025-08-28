@@ -1,53 +1,36 @@
 version: "3.1"
 rules:
-
-  - rule: greet
+  - rule: greet → intro
     steps:
       - intent: greet
       - action: utter_greet
-
-  - rule: goodbye
-    steps:
-      - intent: goodbye
-      - action: utter_goodbye
-
-  - rule: thanks
-    steps:
-      - intent: thanks
-      - action: utter_thanks
+      - action: utter_introduction
 
   - rule: bot purpose
     steps:
       - intent: bot_purpose
       - action: utter_bot_purpose
 
+  - rule: thanks
+    steps:
+      - intent: thanks
+      - action: utter_thanks
+
+  - rule: goodbye
+    steps:
+      - intent: goodbye
+      - action: utter_goodbye
+
   - rule: smalltalk
     steps:
       - intent: smalltalk
       - action: utter_smalltalk
 
-  - rule: out of scope
-    steps:
-      - intent: out_of_scope
-      - action: utter_out_of_scope
-
-  - rule: fallback
-    steps:
-      - intent: nlu_fallback
-      - action: utter_fallback
-
-  - rule: app help overview
+  - rule: app overview
     steps:
       - intent: app_help_overview
       - action: utter_app_help_overview
-      - action: utter_navigate_help
 
-  - rule: navigate (frontend page switch)
-    steps:
-      - intent: navigate_page
-      - action: action_navigate_page
-
-  # Page-specific helpers
   - rule: board usage
     steps:
       - intent: board_usage
@@ -108,18 +91,17 @@ rules:
       - intent: audit_usage
       - action: utter_audit_usage
 
-  # Şimdilik backend yok: bilgi ver
-  - rule: list overdue (temporary)
-    steps:
-      - intent: list_overdue
-      - action: utter_task_help
-
-  - rule: task status (temporary)
-    steps:
-      - intent: task_status
-      - action: utter_task_help
-
-  - rule: generic task help
+  - rule: task help
     steps:
       - intent: task_help
       - action: utter_task_help
+
+  - rule: out of scope
+    steps:
+      - intent: out_of_scope
+      - action: utter_out_of_scope
+
+  - rule: fallback
+    steps:
+      - intent: nlu_fallback
+      - action: utter_fallback
