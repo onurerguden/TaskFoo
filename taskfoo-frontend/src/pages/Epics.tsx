@@ -243,7 +243,7 @@ export default function Epics() {
         },
       },
       {
-        title: "Completion",
+        title: "Task Completion",
         width: 260,
         render: (_: any, r: EpicRow) => {
           const list = (tasks as TaskListItemResponse[]).filter((t) => t.epic?.id === r.id);

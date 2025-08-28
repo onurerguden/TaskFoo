@@ -253,7 +253,7 @@ export default function Projects() {
         },
       },
       {
-        title: "Completion",
+        title: "Task Completion",
         width: 260,
         render: (_: any, r: ProjectRow) => {
           const list = (tasks as TaskListItemResponse[]).filter((t) => {
