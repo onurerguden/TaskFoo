@@ -1,5 +1,6 @@
 version: "3.1"
 rules:
+
   - rule: greet
     steps:
       - intent: greet
@@ -15,7 +16,7 @@ rules:
       - intent: thanks
       - action: utter_thanks
 
-  - rule: purpose
+  - rule: bot purpose
     steps:
       - intent: bot_purpose
       - action: utter_bot_purpose
@@ -24,11 +25,6 @@ rules:
     steps:
       - intent: smalltalk
       - action: utter_smalltalk
-
-  - rule: task help
-    steps:
-      - intent: task_help
-      - action: utter_task_help
 
   - rule: out of scope
     steps:
@@ -40,15 +36,90 @@ rules:
       - intent: nlu_fallback
       - action: utter_fallback
 
+  - rule: app help overview
+    steps:
+      - intent: app_help_overview
+      - action: utter_app_help_overview
+      - action: utter_navigate_help
 
+  - rule: navigate (frontend page switch)
+    steps:
+      - intent: navigate_page
+      - action: action_navigate_page
 
-  # Şimdilik custom action yerine bilgilendirici cevap verelim
-  - rule: handle task_status in demo
+  # Page-specific helpers
+  - rule: board usage
+    steps:
+      - intent: board_usage
+      - action: utter_board_usage
+
+  - rule: gantt usage
+    steps:
+      - intent: gantt_usage
+      - action: utter_gantt_usage
+
+  - rule: dashboard overview
+    steps:
+      - intent: dashboard_overview
+      - action: utter_dashboard_overview
+
+  - rule: task list usage
+    steps:
+      - intent: task_list_usage
+      - action: utter_task_list_usage
+
+  - rule: task create help
+    steps:
+      - intent: task_create_help
+      - action: utter_task_create_help
+
+  - rule: project overview
+    steps:
+      - intent: project_overview
+      - action: utter_project_overview
+
+  - rule: project create help
+    steps:
+      - intent: project_create_help
+      - action: utter_project_create_help
+
+  - rule: epic overview
+    steps:
+      - intent: epic_overview
+      - action: utter_epic_overview
+
+  - rule: epic create help
+    steps:
+      - intent: epic_create_help
+      - action: utter_epic_create_help
+
+  - rule: user mgmt help
+    steps:
+      - intent: user_mgmt_help
+      - action: utter_user_mgmt_help
+
+  - rule: user create help
+    steps:
+      - intent: user_create_help
+      - action: utter_user_create_help
+
+  - rule: audit usage
+    steps:
+      - intent: audit_usage
+      - action: utter_audit_usage
+
+  # Şimdilik backend yok: bilgi ver
+  - rule: list overdue (temporary)
+    steps:
+      - intent: list_overdue
+      - action: utter_task_help
+
+  - rule: task status (temporary)
     steps:
       - intent: task_status
       - action: utter_task_help
 
-  - rule: handle list_overdue in demo
+  - rule: generic task help
     steps:
-      - intent: list_overdue
+      - intent: task_help
       - action: utter_task_help

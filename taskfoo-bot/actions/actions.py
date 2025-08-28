@@ -1,27 +1,52 @@
-# This files contains your custom actions which can be used to run
-# custom Python code.
-#
-# See this guide on how to implement these action:
-# https://rasa.com/docs/rasa/custom-actions
+# actions/actions.py
+from typing import Any, Dict, List, Text
+from rasa_sdk import Action, Tracker
+from rasa_sdk.executor import CollectingDispatcher
 
+class ActionNavigatePage(Action):
+    def name(self) -> Text:
+        return "action_navigate_page"
 
-# This is a simple example for a custom action which utters "Hello World!"
+    def run(
+        self,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any],
+    ) -> List[Dict[Text, Any]]:
+        text = (tracker.latest_message.get("text") or "").lower()
 
-# from typing import Any, Text, Dict, List
-#
-# from rasa_sdk import Action, Tracker
-# from rasa_sdk.executor import CollectingDispatcher
-#
-#
-# class ActionHelloWorld(Action):
-#
-#     def name(self) -> Text:
-#         return "action_hello_world"
-#
-#     def run(self, dispatcher: CollectingDispatcher,
-#             tracker: Tracker,
-#             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-#
-#         dispatcher.utter_message(text="Hello World!")
-#
-#         return []
+        routes = {
+            "board": "/board",
+            "gantt": "/gantt",
+            "gantt chart": "/gantt",
+            "dashboard": "/dashboard",
+            "tasks": "/tasks",
+            "task list": "/tasks",
+            "new task": "/tasks/new",
+            "projects": "/projects",
+            "new project": "/projects/new",
+            "epics": "/epics",
+            "new epic": "/epics/new",
+            "users": "/users",
+            "new user": "/users/new",
+            "audit": "/audit",
+        }
+
+        target = None
+        for k, v in routes.items():
+            if k in text:
+                target = v
+                break
+
+        if target:
+            # Send a structured payload the frontend can catch
+            dispatcher.utter_message(
+                text=f"Opening {target}…",
+                json_message={"type": "navigate", "route": target},
+            )
+        else:
+            dispatcher.utter_message(
+                text="Tell me which page to open (e.g. “Open Board”, “Go to Dashboard”)."
+            )
+
+        return []

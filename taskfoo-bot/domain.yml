@@ -8,53 +8,135 @@ intents:
   - smalltalk
   - task_help
   - out_of_scope
-  # Stories/rules içinde görünen eksikler:
-  - affirm
-  - deny
-  - mood_great
-  - mood_unhappy
-  - task_status
+  - nlu_fallback
+  - app_help_overview
+  - navigate_page
+  - board_usage
+  - gantt_usage
+  - dashboard_overview
+  - task_list_usage
+  - task_create_help
+  - project_overview
+  - project_create_help
+  - epic_overview
+  - epic_create_help
+  - user_mgmt_help
+  - user_create_help
+  - audit_usage
   - list_overdue
+  - task_status
+
+entities:
+  - page
 
 responses:
   utter_greet:
-    - text: "Hi! I’m the TaskFoo assistant. How can I help?"
-    - text: "Hello there 👋 Ready when you are."
+    - text: "Hello there! I'm ready to help you."
   utter_goodbye:
     - text: "See you! Have a productive day."
   utter_thanks:
-    - text: "You’re welcome! 🙌"
+    - text: "You're welcome! 🙌"
   utter_bot_purpose:
-    - text: "For now I answer general questions. Soon I’ll connect to TaskFoo’s API to fetch real data."
+    - text: |
+        I’m your TaskFoo assistant. I can explain how the app works, where to do things,
+        and run certain actions (like checking task status) using your account.
   utter_smalltalk:
     - text: "I’m here. How’s your sprint going?"
-    - text: "Busy day? We can tidy your flow together."
+  utter_out_of_scope:
+    - text: "That’s outside my scope. I can help with TaskFoo usage and your work items."
+  utter_fallback:
+    - text: "I didn’t quite get that. Try rephrasing or ask for app help."
+  utter_app_help_overview:
+    - text: |
+        TaskFoo layout:
+        • Board – drag & drop workflow, quick status changes
+        • Gantt Chart – timelines, durations, dependencies
+        • Dashboard – KPIs, status summaries, at-risk items
+        • Tasks – search, filter, bulk update, details
+        • Projects / Epics – hierarchy & progress
+        • Users – roles & permissions
+        • Audit – who changed what and when
+        Ask “Navigate to <page>” or “How do I <do-thing>?” for details.
+  utter_navigate_help:
+    - text: |
+        You can open: Board, Gantt Chart, Dashboard, Tasks, New Task, Projects, New Project,
+        Epics, New Epic, Users, New User, Audit. Say “Go to Board” or “Open the Audit page”.
+  utter_board_usage:
+    - text: |
+        Board tips:
+        • Drag & drop between columns to change status
+        • Filter by assignee, project, label; search is top-right
+        • Group by status/assignee; show only “My tasks”
+        • Open a card to change priority, dates, or add comments
+  utter_gantt_usage:
+    - text: |
+        Gantt tips:
+        • Zoom with +/–; “Today” jumps to current date
+        • Drag edges to adjust duration; set start/due in details
+        • Create dependencies; collapse/expand projects
+        • Filter by project; export screenshot from toolbar
+  utter_dashboard_overview:
+    - text: |
+        Dashboard shows: status summary, overdue/at-risk, active projects, workload.
+        You can customize widgets and filter by assignee/project.
+  utter_task_list_usage:
+    - text: |
+        Tasks page:
+        • Search & advanced filters (status, assignee, project, labels)
+        • Sort by due date/priority; bulk update selections
+        • Open details to comment, attach files, change fields
+  utter_task_create_help:
+    - text: |
+        New Task:
+        • Required: title; optional: description, assignee, dates, priority
+        • Link to project/epic, add labels, checklist, estimates
+        • You can also create from Board column
+  utter_project_overview:
+    - text: |
+        Projects:
+        • View details, progress, members
+        • Filter/search projects, archive when done
+        • See project timeline and all related tasks
+  utter_project_create_help:
+    - text: |
+        New Project:
+        • Required: name; set owner, start/end dates, goals/description
+        • Add members, default labels/workflow, privacy/visibility
+        • Import or clone from an existing project
+  utter_epic_overview:
+    - text: |
+        Epics:
+        • Group related tasks across projects
+        • Track progress and move tasks between epics
+        • Link epics to projects; manage status
+  utter_epic_create_help:
+    - text: |
+        New Epic:
+        • Required: title; set dates, owner, labels
+        • Connect tasks; write a clear problem/outcome description
+        • You can split/reorder epics later
+  utter_user_mgmt_help:
+    - text: |
+        Users:
+        • Change roles, reset passwords, deactivate/suspend
+        • View activity and filter by team; manage admin permissions
+        • Invite users to projects
+  utter_user_create_help:
+    - text: |
+        New User:
+        • Required info: name, email
+        • Assign roles, add to projects, set default permissions
+        • Bulk CSV import and resend invites are supported
+  utter_audit_usage:
+    - text: |
+        Audit:
+        • Search and filter by user, action, entity or date
+        • Inspect change history for a task or user, export logs
+        • Includes login and permission changes
   utter_task_help:
     - text: |
-        I’m in demo mode. Here are a few tips I can explain:
-        • How to plan today’s tasks
-        • Quick ways to trim the backlog
-        • What a concise daily stand-up looks like
-  utter_out_of_scope:
-    - text: "I can’t answer that yet—could you rephrase?"
-  utter_fallback:
-    - text: "I didn’t quite get that. Could you clarify?"
-
-  # Stories’te adı geçen ama domain’de olmayan utter’lar:
-  utter_happy:
-    - text: "Great to hear! 🚀"
-  utter_cheer_up:
-    - text: "Here’s a tip: keep PRs small and focused—it lifts spirits!"
-  utter_did_that_help:
-    - text: "Did that help?"
+        I can guide planning, standups, backlog hygiene and prioritization.
+        Ask me about Board/Gantt/Dashboard/Tasks/Projects/Epics/Users/Audit.
 
 actions:
-  # Stories/rules içinde geçen custom actions’ı domain’e yazmak şart,
-  # API modunu sonra açacağız; şimdilik listedeler ama çalıştırmazsın.
-  - action_list_overdue
-  - action_task_status
-
-# (opsiyonel) session_config ekleyebilirsin
-# session_config:
-#   session_expiration_time: 60
-#   carry_over_slots_to_new_session: true
+  - action_navigate_page

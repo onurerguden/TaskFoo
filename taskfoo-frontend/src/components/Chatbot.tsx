@@ -1,5 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 
+type BotAPIItem = {
+  text?: string;
+  image?: string;
+  buttons?: { title: string; payload: string }[];
+  custom?: any;
+};
+
+function navigateFromBotCustom(custom: any) {
+  if (!custom) return;
+  // Rasa SDK: dispatcher.utter_message(json_message={ ... }) lands here as `custom` (aka `json`)
+  if (custom.type === "frontend_navigate" && custom.page) {
+    // 1) fire a custom event other parts of the app can listen to
+    window.dispatchEvent(new CustomEvent("taskfoo:navigate", { detail: { page: custom.page } }));
+    // 2) optional: naive fallback if you use hash routing
+    try {
+      if (typeof custom.hash === "string") {
+        window.location.hash = custom.hash;
+      }
+    } catch {}
+    console.log("[Chatbot] navigation requested:", custom);
+  }
+}
+
 const BOT_URL = import.meta.env.VITE_BOT_URL || "http://localhost:5005";
 
 type Msg = { from: "user" | "bot"; text: string };
@@ -7,7 +30,7 @@ type Msg = { from: "user" | "bot"; text: string };
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
-    { from: "bot", text: "Hi! I’m the TaskFoo assistant. How can I help? 🚀" },
+    { from: "bot", text: "Hi! I’m the TaskFoo assistant. How can I help?" },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -28,19 +51,33 @@ export default function Chatbot() {
     setIsTyping(true);
 
     try {
+      const payload: any = { sender: "onur", message: text };
+      const jwt = localStorage.getItem("jwt") || sessionStorage.getItem("jwt");
+      if (jwt) payload.metadata = { jwt };
       const res = await fetch(`${BOT_URL}/webhooks/rest/webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sender: "onur", message: text }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       
       // Bot yanıtını geciktirerek yazıyor hissi ver
       setTimeout(() => {
-        const botMsgs: Msg[] = (Array.isArray(data) ? data : []).map((d: any) => ({
-          from: "bot",
-          text: d.text || "",
-        }));
+        const apiItems: BotAPIItem[] = Array.isArray(data) ? data : [];
+
+        // trigger any frontend actions (navigation etc.)
+        apiItems.forEach((item) => navigateFromBotCustom(item.custom));
+
+        const botMsgs: Msg[] = [];
+        apiItems.forEach((d) => {
+          if (d.text) botMsgs.push({ from: "bot", text: d.text });
+          if (d.image) botMsgs.push({ from: "bot", text: `![image](${d.image})` });
+          if (d.buttons && d.buttons.length) {
+            const hints = d.buttons.map((b) => `• ${b.title}`).join("\n");
+            botMsgs.push({ from: "bot", text: `Suggestions:\n${hints}` });
+          }
+        });
+
         setMessages((m) => [...m, ...botMsgs]);
         setIsTyping(false);
       }, 1200);
@@ -115,7 +152,7 @@ export default function Chatbot() {
           transform: open ? "translateY(0) scale(1)" : "translateY(20px) scale(0.95)",
           opacity: open ? 1 : 0,
           visibility: open ? "visible" : "hidden",
-          transition: "all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+          transition: "transform 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 240ms ease, visibility 0s linear 140ms",
         }}
       >
         {/* Header */}
@@ -185,7 +222,11 @@ export default function Chatbot() {
                   lineHeight: "1.5",
                 }}
               >
-                {m.text}
+                {m.text.startsWith("![image](") ? (
+                  <img src={m.text.slice(9, -1)} alt="bot" style={{ maxWidth: "100%", borderRadius: 12 }} />
+                ) : (
+                  m.text
+                )}
               </div>
             </div>
           ))}
@@ -334,6 +375,9 @@ export default function Chatbot() {
         .chat-panel::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
         }
+
+        /* subtle pop for opening */
+        .chat-panel.open { will-change: transform, opacity; }
       `}</style>
     </>
   );
