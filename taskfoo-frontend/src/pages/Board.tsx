@@ -53,6 +53,7 @@ import {
   WifiOutlined,
   ReloadOutlined,
   PlusOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 
 import { listStatuses } from "../api/statuses";
@@ -215,6 +216,7 @@ function DraggableTask({
   onAssign,
   onEdit,
   onDelete,
+  onOpenMenu,
   suppressWarnings,
   justDone,
 }: {
@@ -223,6 +225,7 @@ function DraggableTask({
   onAssign: (task: TaskWithMetadata) => void;
   onEdit: (task: TaskWithMetadata) => void;
   onDelete: (task: TaskWithMetadata) => void;
+  onOpenMenu?: (coords: { x: number; y: number }, task: TaskWithMetadata) => void;
   suppressWarnings: boolean;
   justDone?: boolean;
 }) {
@@ -286,6 +289,7 @@ const dropdownItems: MenuProps['items'] = [
       size="small"
       style={style}
       onClick={handleClick}
+      onDoubleClick={(e) => { e.stopPropagation(); onOpenMenu && onOpenMenu({ x: e.clientX, y: e.clientY }, task); }}
       {...listeners}
       {...attributes}
       title={
@@ -509,6 +513,7 @@ function Column({
   onTaskEdit,
   onTaskAssign,
   onTaskDelete,
+  onTaskMenuOpen,
   suppressWarnings,
   recentlyDoneIds,
 }: { 
@@ -520,6 +525,7 @@ function Column({
   onTaskEdit: (task: TaskWithMetadata) => void;
   onTaskAssign: (task: TaskWithMetadata) => void;
   onTaskDelete: (task: TaskWithMetadata) => void;
+  onTaskMenuOpen: (task: TaskWithMetadata, x: number, y: number) => void;
   suppressWarnings: boolean;
   recentlyDoneIds: Set<number>;
 }) {
@@ -610,6 +616,7 @@ function Column({
               onAssign={onTaskAssign}
               onEdit={onTaskEdit}
               onDelete={onTaskDelete}
+              onOpenMenu={({ x, y }, t) => onTaskMenuOpen(t, x, y)}
               suppressWarnings={suppressWarnings}
               justDone={recentlyDoneIds.has(task.id)}
             />
@@ -815,9 +822,20 @@ export default function EnhancedBoard() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [editingTask, setEditingTask] = useState<TaskWithMetadata | null>(null);
   const [recentlyDoneIds, setRecentlyDoneIds] = useState<Set<number>>(new Set());
-const [assigningTask, setAssigningTask] = useState<TaskWithMetadata | null>(null);
-const [assignUserIds, setAssignUserIds] = useState<number[]>([]);
-const [deletingTask, setDeletingTask] = useState<TaskWithMetadata | null>(null);
+  const [assigningTask, setAssigningTask] = useState<TaskWithMetadata | null>(null);
+  const [assignUserIds, setAssignUserIds] = useState<number[]>([]);
+  const [deletingTask, setDeletingTask] = useState<TaskWithMetadata | null>(null);
+  const [cardMenu, setCardMenu] = useState<{ open: boolean; x: number; y: number; task: TaskWithMetadata | null }>({ open: false, x: 0, y: 0, task: null });
+  useEffect(() => {
+    if (!cardMenu.open) return;
+    const onDocDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.ant-dropdown, .ant-dropdown-menu')) return;
+      setCardMenu({ open: false, x: 0, y: 0, task: null });
+    };
+    document.addEventListener('mousedown', onDocDown);
+    return () => document.removeEventListener('mousedown', onDocDown);
+  }, [cardMenu.open]);
 
   // WebSocket subscriptions: invalidate task list on any board/task event
   useEffect(() => {
@@ -1304,6 +1322,7 @@ const handleDeleteConfirm = () => {
                     onTaskEdit={handleTaskEdit}
                     onTaskAssign={handleOpenAssign}
                     onTaskDelete={handleOpenDelete}
+                    onTaskMenuOpen={(task, x, y) => setCardMenu({ open: true, x, y, task })}
                     suppressWarnings={status.name === 'Done' || status.name === 'Archive'}
                     recentlyDoneIds={recentlyDoneIds}
                   />
@@ -1315,6 +1334,38 @@ const handleDeleteConfirm = () => {
               {activeTask && <DraggedPreview task={activeTask} />}
             </DragOverlay>
           </DndContext>
+          {cardMenu.open && (
+            <Dropdown
+              open
+              placement="bottomLeft"
+              onOpenChange={(o) => { if (!o) setCardMenu({ open: false, x: 0, y: 0, task: null }); }}
+              menu={{
+                items: [
+                  {
+                    key: 'edit',
+                    label: 'Edit Task',
+                    icon: <EditOutlined />,
+                    onClick: () => { if (cardMenu.task) setEditingTask(cardMenu.task); setCardMenu({ open: false, x: 0, y: 0, task: null }); },
+                  },
+                  {
+                    key: 'assign',
+                    label: 'Assign Users',
+                    icon: <UserOutlined />,
+                    onClick: () => { if (cardMenu.task) handleOpenAssign(cardMenu.task); setCardMenu({ open: false, x: 0, y: 0, task: null }); },
+                  },
+                  { type: 'divider' },
+                  {
+                    key: 'delete',
+                    label: <span style={{ color: '#ef4444' }}>Delete Task</span>,
+                    icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
+                    onClick: () => { if (cardMenu.task) handleOpenDelete(cardMenu.task); setCardMenu({ open: false, x: 0, y: 0, task: null }); },
+                  },
+                ],
+              }}
+            >
+              <span style={{ position: 'fixed', left: cardMenu.x, top: cardMenu.y, width: 1, height: 1, display: 'inline-block' }} />
+            </Dropdown>
+          )}
         </div>
 
         {/* Assign Users Modal */}

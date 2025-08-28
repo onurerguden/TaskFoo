@@ -6,11 +6,9 @@ import {
   DashboardOutlined,
   ProfileOutlined,
   AppstoreOutlined,
-  PlusOutlined,
   ProjectOutlined,
   FlagOutlined,
   TeamOutlined,
-  UnorderedListOutlined,
   BarChartOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
@@ -26,21 +24,21 @@ const items: MenuProps["items"] = [
   
   // Tasks
   { key: "/tasks", label: "Tasks", icon: <ProfileOutlined /> },
-  { key: "/tasks/new", label: "New Task", icon: <PlusOutlined /> },
+  //{ key: "/tasks/new", label: "New Task", icon: <PlusOutlined /> },
 
   { type: "divider" },
 
   // Projects
-  { key: "/projects", label: "Projects", icon: <UnorderedListOutlined /> },
-  { key: "/projects/new", label: "New Project", icon: <ProjectOutlined /> },
+  { key: "/projects", label: "Projects", icon: <ProjectOutlined /> },
+  //{ key: "/projects/new", label: "New Project", icon: <ProjectOutlined /> },
 
   // Epics
-  { key: "/epics", label: "Epics", icon: <UnorderedListOutlined /> },
-  { key: "/epics/new", label: "New Epic", icon: <FlagOutlined /> },
+  { key: "/epics", label: "Epics", icon: <FlagOutlined /> },
+  //{ key: "/epics/new", label: "New Epic", icon: <FlagOutlined /> },
 
   // Users
-  { key: "/users", label: "Users", icon: <UnorderedListOutlined /> },
-  { key: "/users/new", label: "New User", icon: <TeamOutlined /> },
+  { key: "/users", label: "Users", icon: <TeamOutlined /> },
+  //{ key: "/users/new", label: "New User", icon: <TeamOutlined /> },
   
   
   
