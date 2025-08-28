@@ -1342,17 +1342,18 @@ const handleDeleteConfirm = () => {
               menu={{
                 items: [
                   {
-                    key: 'edit',
-                    label: 'Edit Task',
-                    icon: <EditOutlined />,
-                    onClick: () => { if (cardMenu.task) setEditingTask(cardMenu.task); setCardMenu({ open: false, x: 0, y: 0, task: null }); },
-                  },
-                  {
                     key: 'assign',
                     label: 'Assign Users',
                     icon: <UserOutlined />,
                     onClick: () => { if (cardMenu.task) handleOpenAssign(cardMenu.task); setCardMenu({ open: false, x: 0, y: 0, task: null }); },
                   },
+                  {
+                    key: 'edit',
+                    label: 'Edit Task',
+                    icon: <EditOutlined />,
+                    onClick: () => { if (cardMenu.task) setEditingTask(cardMenu.task); setCardMenu({ open: false, x: 0, y: 0, task: null }); },
+                  },
+                  
                   { type: 'divider' },
                   {
                     key: 'delete',
