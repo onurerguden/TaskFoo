@@ -17,3 +17,5 @@ The initial model sometimes included Turkish words surrounding a title in the to
 ## Transaction evidence
 
 [The PostgreSQL integration tests](../taskfoo-backend/src/test/java/com/taskfoo/taskfoo_backend/assistant/AssistantIntegrationTest.java) replace the model output with fixed cases and verify a different property. A changed role, moved or stale task and conflicting write must never mutate the protected task. Two simultaneous confirmations return one receipt and produce one audit row. The rollback test uses a real PostgreSQL check constraint to force the audit insert to fail before retrying the same proposal.
+
+The [browser recording](../docs/demo.mp4) uses a fresh PostgreSQL database with the two demo projects. The [recorded receipt](browser_demo_receipt.json) shows the task in Done, the replay returning the original receipt, and a single audit row for that proposal.

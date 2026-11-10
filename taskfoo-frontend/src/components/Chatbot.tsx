@@ -44,7 +44,7 @@ export default function Chatbot() {
       top: scrollerRef.current.scrollHeight,
       behavior: 'smooth'
     });
-  }, [messages, open]);
+  }, [messages, open, preview]);
 
   function addMessage(text: string) {
     setMessages((current) => [...current, { from: "bot", text }]);
