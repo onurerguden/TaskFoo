@@ -21,6 +21,7 @@ public class UserController {
         return userService.getAllUsers();
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public UserBriefDto createUser(@RequestBody User user) {
         return userService.createUser(user);
@@ -32,6 +33,7 @@ public class UserController {
     }
 
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/roles")
     public UserBriefDto updateUserRoles(
             @PathVariable Long id,

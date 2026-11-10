@@ -1,61 +1,27 @@
 # TaskFoo
 
-A full-stack project management application with projects, epics and task workflows, role-based access, audit events and real-time updates. Built during my software engineering internship at VBT Software.
+TaskFoo is a project board built with Spring Boot, PostgreSQL and React. My contribution adds a local LLM assistant that can find a task and prepare a change. A project manager or administrator sees the exact change before deciding whether to commit it.
 
-[Onur Ergüden](https://onurerguden.dev) · [Portfolio context](https://onurerguden.dev/en/projects#taskfoo)
-
-## Features
-
-- Project and epic organization, task assignment, statuses and priorities.
-- Authentication and role-based access with Spring Security and JWT.
-- PostgreSQL persistence through Spring Data JPA.
-- WebSocket/STOMP integration for real-time updates.
-- A React/TypeScript interface using Ant Design, TanStack Query and drag-and-drop components.
-- A separate Rasa bot module in `taskfoo-bot/`.
-
-## Architecture
-
-```text
-React + TypeScript (Vite) → Spring Boot REST API → PostgreSQL
-                         ↔ WebSocket/STOMP updates
-```
-
-| Directory | Purpose |
-| --- | --- |
-| `taskfoo-backend/` | Spring Boot services, controllers, persistence and security |
-| `taskfoo-frontend/` | React application, views and API integration |
-| `taskfoo-bot/` | Rasa configuration, training data and actions |
-
-## Local development
-
-The backend targets **Java 24** in its Maven configuration. Use Java 24, PostgreSQL and **Node.js 22.12+** for the frontend, following [Vite 7's Node requirements](https://vite.dev/blog/announcing-vite7#node-js-support).
-
-Clone the repository:
+[Browser demo](docs/demo.mp4) · [Evaluation and failure analysis](evaluation/README.md) · [PostgreSQL integration tests](taskfoo-backend/src/test/java/com/taskfoo/taskfoo_backend/assistant/AssistantIntegrationTest.java)
 
 ```sh
-git clone https://github.com/onurerguden/TaskFoo.git
-cd TaskFoo
+python3 evaluation/run_assistant.py --demo
 ```
 
-Create a local PostgreSQL database and user. Configure the backend with your own local values using Spring Boot environment variables:
+## Run the demo
+
+Use Java 24, Node.js 22.12 or later, Docker Compose and Ollama. Run the database and pull the model from the repository root.
 
 ```sh
-export SPRING_DATASOURCE_URL='jdbc:postgresql://localhost:5432/taskfoo'
-export SPRING_DATASOURCE_USERNAME='your_local_user'
-export SPRING_DATASOURCE_PASSWORD='your_local_password'
-export JWT_SECRET='replace-with-a-long-random-local-secret-at-least-64-characters'
+docker compose up -d --wait postgres
+ollama pull qwen3:4b-instruct-2507-q4_K_M
+export SPRING_DATASOURCE_PASSWORD=local-taskfoo
+export JWT_SECRET="$(openssl rand -hex 64)"
+export TASKFOO_DEMO_PASSWORD=local-demo-only
+(cd taskfoo-backend && SPRING_PROFILES_ACTIVE=assistant-demo ./mvnw spring-boot:run)
 ```
 
-Then start the backend:
-
-```sh
-cd taskfoo-backend
-./mvnw spring-boot:run
-```
-
-On Windows, use `mvnw.cmd`. The configured API port is `8080` and the frontend origin is `http://localhost:5173`. The committed configuration is for local development; use environment-specific credentials and configuration for any deployment.
-
-In another terminal, start the frontend:
+In a second terminal, run:
 
 ```sh
 cd taskfoo-frontend
@@ -63,21 +29,22 @@ npm ci
 npm run dev
 ```
 
-These steps cover the core web application. The Rasa module has separate configuration in `taskfoo-bot/`.
+Open the Vite URL and sign in as `pm@example.test` with the demo password. The demo profile seeds two projects with a task called **Report**. Open the assistant, choose **Delivery Lab**, and ask it to find **Report**. Then ask it to change the status of **Report** to **Done**. Confirm the preview and inspect the board and the audit page. Use a fresh demo database when repeating the same write scenario.
 
-## Available checks
+The model runs locally. Set `TASKFOO_ASSISTANT_URL` when Ollama uses a different loopback address. The PostgreSQL connection uses `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD`.
 
-From `taskfoo-backend/`:
+## What the server verifies
+
+`POST /api/assistant/chat` accepts the selected project and a request. It returns matching task IDs, a clarification, or a single preview. The server validates the model's four tool schemas and resolves names against the selected project's records. Write values must be explicit in the request. The project selector limits the assistant's search and write targets within TaskFoo's existing access model.
+
+`POST /api/assistant/proposals/{id}/confirm` rechecks ownership, the current role, expiration and the task version. PostgreSQL locks the proposal during confirmation. The task change, audit event and receipt commit together. A replay returns the same receipt. The board refresh event contains the task ID and is sent after commit.
+
+## Reproduce the checks
 
 ```sh
-./mvnw test
+(cd taskfoo-backend && ./mvnw test)
+(cd taskfoo-frontend && npm run build && npx eslint src/components/Chatbot.tsx src/api/auth.ts)
+TASKFOO_DEMO_PASSWORD=local-demo-only python3 evaluation/run_assistant.py --output /tmp/taskfoo-results.json
 ```
 
-The Spring Boot context test requires a reachable database and valid backend configuration. From `taskfoo-frontend/`:
-
-```sh
-npm run lint
-npm run build
-```
-
-The frontend has no dedicated test script in its current package manifest. These are the repository's existing checks; they do not by themselves establish end-to-end coverage.
+The fixed model evaluation submits read requests and previews. Run it against the seeded project before the demo changes **Report** to **Done**.

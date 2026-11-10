@@ -9,6 +9,8 @@ import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
@@ -233,7 +235,24 @@ public class TaskService {
 
     /** Aynı anda global ve proje-bazlı topic'lere yayınla */
     private void publish(String type, Object payload, Long projectId) {
-        TaskEvent evt = new TaskEvent(type, payload);
+        Long id = switch (payload) {
+            case Task task -> task.getId();
+            case TaskStatusChangedPayload change -> change.taskId();
+            case TaskAssigneesUpdatedPayload change -> change.taskId();
+            case TaskDatesUpdatedPayload change -> change.taskId();
+            case TaskDeletedPayload change -> change.taskId();
+            default -> throw new IllegalArgumentException("Unknown task event payload");
+        };
+        TaskEvent event = new TaskEvent(type, Map.of("taskId", id));
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                send(event, projectId);
+            }
+        });
+    }
+
+    private void send(TaskEvent evt, Long projectId) {
         // Global kanallar (tüm board/gantt dinleyicileri alır)
         broker.convertAndSend("/topic/tasks", evt);
         broker.convertAndSend("/topic/gantt", evt);

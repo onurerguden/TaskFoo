@@ -29,6 +29,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(405).body("Method not allowed. Allowed: " + String.join(", ", ex.getSupportedMethods()));
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<?> handleStatus(org.springframework.web.server.ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode()).body(Map.of("message",
+            ex.getReason() == null ? "Request failed" : ex.getReason()));
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied() {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Access denied"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGeneric(Exception ex) {
         return ResponseEntity.status(500).body("Internal server error: " + ex.getMessage());
