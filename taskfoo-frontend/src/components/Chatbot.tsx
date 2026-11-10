@@ -1,14 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 
-type BotAPIItem = {
-  text?: string;
-  image?: string;
-  buttons?: { title: string; payload: string }[];
-  custom?: any;
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { isAxiosError } from "axios";
+import api from "../api/client";
+import { listProjects } from "../api/projects";
+
+type Preview = { id: string; before: string; after: string; expiresAt: string };
+type AssistantReply = {
+  kind: "clarify" | "matches" | "preview";
+  message?: string;
+  preview?: Preview;
+  tasks?: { id: number; title: string }[];
 };
 
-
-const BOT_URL = import.meta.env.VITE_BOT_URL || "http://localhost:5005";
+function errorMessage(error: unknown) {
+  if (isAxiosError(error) && typeof error.response?.data?.message === "string") {
+    return error.response.data.message;
+  }
+  return "The assistant request failed. Check the local server and try again.";
+}
 
 type Msg = { from: "user" | "bot"; text: string };
 
@@ -19,6 +29,14 @@ export default function Chatbot() {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [projectId, setProjectId] = useState("");
+  const [preview, setPreview] = useState<Preview>();
+  const queryClient = useQueryClient();
+  const { data: projects = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["projects"],
+    queryFn: listProjects,
+    enabled: open,
+  });
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,50 +44,47 @@ export default function Chatbot() {
       top: scrollerRef.current.scrollHeight,
       behavior: 'smooth'
     });
-  }, [messages, open]);
+  }, [messages, open, preview]);
+
+  function addMessage(text: string) {
+    setMessages((current) => [...current, { from: "bot", text }]);
+  }
 
   async function send() {
     const text = input.trim();
-    if (!text) return;
-    setMessages((m) => [...m, { from: "user", text }]);
+    if (!text || !projectId || isTyping) return;
+    setMessages((current) => [...current, { from: "user", text }]);
     setInput("");
+    setPreview(undefined);
     setIsTyping(true);
-
     try {
-      const payload: any = { sender: "onur", message: text };
-      const jwt = localStorage.getItem("jwt") || sessionStorage.getItem("jwt");
-      if (jwt) payload.metadata = { jwt };
-      const res = await fetch(`${BOT_URL}/webhooks/rest/webhook`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      
-      // Bot yanıtını geciktirerek yazıyor hissi ver
-      setTimeout(() => {
-        const apiItems: BotAPIItem[] = Array.isArray(data) ? data : [];
+      const { data } = await api.post<AssistantReply>("/api/assistant/chat",
+        { projectId: Number(projectId), message: text }, { timeout: 65000 });
+      if (data.preview) setPreview(data.preview);
+      if (data.tasks?.length) addMessage(data.tasks.map((task) => `#${task.id} ${task.title}`).join("\n"));
+      if (data.message) addMessage(data.message);
+    } catch (error) {
+      addMessage(errorMessage(error));
+    } finally {
+      setIsTyping(false);
+    }
+  }
 
-        // trigger any frontend actions (navigation etc.)
-
-        const botMsgs: Msg[] = [];
-        apiItems.forEach((d) => {
-          if (d.text) botMsgs.push({ from: "bot", text: d.text });
-          if (d.image) botMsgs.push({ from: "bot", text: `![image](${d.image})` });
-          if (d.buttons && d.buttons.length) {
-            const hints = d.buttons.map((b) => `• ${b.title}`).join("\n");
-            botMsgs.push({ from: "bot", text: `Suggestions:\n${hints}` });
-          }
-        });
-
-        setMessages((m) => [...m, ...botMsgs]);
-        setIsTyping(false);
-      }, 1200);
-    } catch (e: any) {
-      setTimeout(() => {
-        setMessages((m) => [...m, { from: "bot", text: "Connection error. Is the bot running? 🔧" }]);
-        setIsTyping(false);
-      }, 1000);
+  async function confirm() {
+    if (!preview || isTyping) return;
+    setIsTyping(true);
+    try {
+      const { data } = await api.post<{ taskId: number }>(`/api/assistant/proposals/${preview.id}/confirm`);
+      setPreview(undefined);
+      addMessage(`Saved task #${data.taskId}. The change is recorded in the audit log.`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["task", data.taskId] }),
+      ]);
+    } catch (error) {
+      addMessage(errorMessage(error));
+    } finally {
+      setIsTyping(false);
     }
   }
 
@@ -206,15 +221,21 @@ export default function Chatbot() {
                   lineHeight: "1.5",
                 }}
               >
-                {m.text.startsWith("![image](") ? (
-                  <img src={m.text.slice(9, -1)} alt="bot" style={{ maxWidth: "100%", borderRadius: 12 }} />
-                ) : (
-                  m.text
-                )}
+                {m.text}
               </div>
             </div>
           ))}
 
+          {preview && (
+            <section aria-label="Proposed task change" style={{ background: "white", padding: 16, borderRadius: 12 }}>
+              <strong>Review this change</strong>
+              <p style={{ whiteSpace: "pre-wrap" }}><b>Before</b><br />{preview.before}</p>
+              <p style={{ whiteSpace: "pre-wrap" }}><b>After</b><br />{preview.after}</p>
+              <p>Expires at {new Date(preview.expiresAt).toLocaleTimeString()}</p>
+              <button type="button" onClick={confirm} disabled={isTyping}>Confirm change</button>{" "}
+              <button type="button" onClick={() => setPreview(undefined)} disabled={isTyping}>Dismiss</button>
+            </section>
+          )}
           {/* Typing Indicator */}
           {isTyping && (
             <div style={{ display: "flex", justifyContent: "flex-start", margin: "16px 0" }}>
@@ -245,8 +266,18 @@ export default function Chatbot() {
             borderTop: "1px solid rgba(59, 130, 246, 0.1)",
           }}
         >
-          <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
+          <label>
+            Project{" "}
+            <select aria-label="Assistant project" value={projectId} disabled={isTyping}
+              onChange={(event) => { setProjectId(event.target.value); setPreview(undefined); }}>
+              <option value="">Choose a project</option>
+              {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+            </select>
+          </label>
+          <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", marginTop: 8 }}>
             <input
+              aria-label="Task request"
+              maxLength={2000}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
@@ -272,7 +303,7 @@ export default function Chatbot() {
             />
             <button
               onClick={send}
-              disabled={!input.trim() || isTyping}
+              disabled={!projectId || !input.trim() || isTyping}
               style={{
                 padding: "14px 18px",
                 borderRadius: 16,

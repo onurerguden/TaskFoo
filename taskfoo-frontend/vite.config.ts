@@ -11,6 +11,10 @@ export default defineConfig({
         target: "http://localhost:8080",
         changeOrigin: true,
       },
+      "/auth": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
       // WebSocket / SockJS endpoint'i
       "/ws": {
         target: "http://localhost:8080",

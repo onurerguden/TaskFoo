@@ -10,8 +10,8 @@ type AuthResponse = {
 const pickToken = (d: AuthResponse) => d.token ?? d.accessToken;
 
 export async function login(email: string, password: string) {
-  const res = await api.post("/auth/login", { email, password });
-  const token = res.data.token ?? res.data.accessToken;
+  const res = await api.post<AuthResponse>("/auth/login", { email, password });
+  const token = pickToken(res.data);
   if (!token) throw new Error("Login response içinde token yok.");
   localStorage.setItem("token", token);
   return res.data;

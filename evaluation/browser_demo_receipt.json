@@ -1,0 +1,47 @@
+{
+  "receipt": {
+    "proposalId": "314ccd49-4ff8-4d59-97d6-4f549e39b39c",
+    "taskId": 1
+  },
+  "replay": {
+    "proposalId": "314ccd49-4ff8-4d59-97d6-4f549e39b39c",
+    "taskId": 1
+  },
+  "task": {
+    "id": 1,
+    "title": "Report",
+    "description": "Prepare the project report",
+    "startDate": "2026-11-10",
+    "dueDate": "2026-11-12",
+    "status": {
+      "id": 2,
+      "name": "Done"
+    },
+    "priority": {
+      "id": 1,
+      "name": "High",
+      "color": "red"
+    },
+    "epic": {
+      "id": 1,
+      "name": "Delivery"
+    },
+    "assignees": [],
+    "version": 1
+  },
+  "audit": [
+    {
+      "id": 2,
+      "action": "MOVE",
+      "entityId": 1,
+      "pageContext": "ASSISTANT",
+      "changedFields": [
+        {
+          "field": "statusId",
+          "oldValue": 1,
+          "newValue": 2
+        }
+      ]
+    }
+  ]
+}

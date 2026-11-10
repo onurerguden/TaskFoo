@@ -1,0 +1,52 @@
+name: TaskFoo CI
+on: [pull_request, push]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: taskfoo_test
+          POSTGRES_USER: taskfoo
+          POSTGRES_PASSWORD: local-ci
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://127.0.0.1:5433/taskfoo_test
+      SPRING_DATASOURCE_USERNAME: taskfoo
+      SPRING_DATASOURCE_PASSWORD: local-ci
+      JWT_SECRET: synthetic-ci-only-0123456789abcdefghijklmnopqrstuvwxyz0123456789
+    defaults:
+      run:
+        working-directory: taskfoo-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '24'
+          cache: maven
+      - run: ./mvnw --batch-mode test
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: taskfoo-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: taskfoo-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx eslint src/components/Chatbot.tsx src/api/auth.ts vite.config.ts
